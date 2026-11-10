@@ -1,7 +1,7 @@
 name: Regression checks
 on: [push, pull_request, workflow_dispatch]
 permissions:
-  contents: read
+  contents: write
 jobs:
   regression:
     runs-on: ubuntu-latest
@@ -15,3 +15,12 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
       - run: npm run test:db
+      - name: Tag verified release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          release_tag="v$(node -p 'require("./package.json").version')"
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$release_tag" >/dev/null 2>&1; then
+            git tag "$release_tag"
+            git push origin "refs/tags/$release_tag"
+          fi
