@@ -34,9 +34,23 @@ jobs:
         run: node node_modules/playwright-core/cli.js install --with-deps --only-shell chromium
       - if: matrix.engine == 'webkit'
         run: node node_modules/playwright-core/cli.js install --with-deps webkit
-      - run: npm run test:browser
+      - name: Run mobile integration
+        id: mobile
+        shell: bash
+        run: |
+          mkdir -p qa-results
+          set +e
+          npm run test:browser > qa-results/run.log 2>&1
+          test_exit=$?
+          echo "exit_code=$test_exit" >> "$GITHUB_OUTPUT"
+          node -e 'const fs=require("fs");let s="passed";if(fs.existsSync("qa-results/failure-summary.json")){const d=JSON.parse(fs.readFileSync("qa-results/failure-summary.json","utf8"));s=d.stage+": "+d.message+" "+d.stack;}console.log("summary="+s.replace(/[\r\n]/g," ").slice(0,700))' >> "$GITHUB_OUTPUT"
+          cat qa-results/run.log
         env:
           QA_BROWSER: ${{ matrix.engine }}
+      - name: "Browser result — ${{ steps.mobile.outputs.summary }}"
+        if: always()
+        shell: bash
+        run: test "${{ steps.mobile.outputs.exit_code }}" = "0"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
