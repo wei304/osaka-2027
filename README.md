@@ -24,7 +24,7 @@
 
 ## 启用五人同步
 
-1. 新建 Supabase 项目，打开 SQL Editor，执行 `supabase/schema.sql`。
+1. 新建 Supabase 项目，打开 SQL Editor，先执行 `supabase/schema.sql`，再执行一次 `supabase/harden.sql`。后者将需要较高权限的函数移入非公开 schema。
 2. 在 Table Editor 的 `trip_members` 表加入五人的小写邮箱；`trip_id` 均填 `osaka-2027`。可先只加自己测试，再加入其他人。请勿将邮箱写入此公开仓库。
 3. Authentication → URL Configuration：Site URL 填 `https://wei304.github.io/osaka-2027/`，Redirect URLs 也加入这一完整地址。
 4. 确认 Email 登录开启，允许新用户注册，保持邮件验证开启。新用户需要先完成邮件验证；只有成员名单中的邮箱能读写旅行内容。邮件发送限额以你的 Supabase 配置为准。
@@ -55,3 +55,9 @@
 ## 验证
 
 `node --test tests/*.test.js` 检查输入验证、离线队列、冲突前的数据合并及操作完成后的版本推进。部署前请用两个成员账户验证 RLS、同条安排并发编辑与离线重连。数据库脚本需在你的 Supabase 项目实际运行后才能验证服务端行为。
+
+## 当前已连接的项目
+
+已配置 `osaka-2027` 免费项目（新加坡区域），公开项目连接信息在 `config.js`；无需手动输入密钥。云端已存入最新版 56 条行程。成员邮箱仅存于数据库。
+
+还需在 Supabase Authentication → URL Configuration 中把 Site URL 与 Redirect URLs 设为实际 GitHub Pages 地址。网站发布后，用自己的成员邮箱发送登录邮件并测试。此处不保存任何真实用户的登录令牌。
