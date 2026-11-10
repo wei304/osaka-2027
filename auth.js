@@ -1,59 +1,16 @@
-export function passwordError(password,confirmation){
- if(password.length<10)return '请设置至少 10 位的密码，建议混合字母、数字和符号。';
- if(password.length>128)return '密码请控制在 128 位以内。';
- if(password!==confirmation)return '两次输入的密码不一致。';
- return '';
-}
-export function authError(error){
- const message=error.message||'',code=error.code||'';
- if(error.status===429||/rate.limit|too many requests/i.test(message))return '登录或邮件请求过于频繁，请稍后重试。已设置密码的旅伴可使用密码登录；请勿反复发送邮件。';
- if(code==='invalid_credentials'||/invalid login credentials/i.test(message))return '邮箱或密码不正确。如果还没设置密码，请展开“首次使用 / 忘记密码”，先用邮件登录一次。';
- if(code==='email_not_confirmed'||/email not confirmed/i.test(message))return '请先通过邮件验证这个邮箱，再使用密码登录。';
- if(code==='same_password')return '新密码与当前密码相同，无需修改。';
- if(code==='weak_password')return '这个密码不符合要求，请换一个更长、更难猜的密码。';
- if(code==='reauthentication_needed'||/reauthentication|nonce/i.test(message))return '这次设置密码需要重新验证身份。请先用邮件重新登录，再设置密码。';
- if(code==='refresh_token_not_found'||code==='refresh_token_already_used')return '登录已过期，请使用邮箱和密码重新登录。';
- if(error.name==='TimeoutError'||error.name==='AbortError')return '连接超时，请检查网络后重试。';
- if(error instanceof TypeError)return '暂时无法连接，请检查网络后重试。';
- return message||'暂时无法登录，请稍后重试。';
-}
-export function installAuth({getCloud,getSession,commitSession,onSignedIn,namespace}){
- const $=selector=>document.querySelector(selector),email=$('#email'),message=$('#auth-message');
- let busy=false,cooldownUntil=0;
- const safeRead=key=>{try{return localStorage.getItem(key);}catch{return null;}};
- const safeWrite=(key,value)=>{try{localStorage.setItem(key,value);}catch{}};
- email.value=safeRead(namespace+'-email')||'';
- cooldownUntil=Math.min(Number(safeRead(namespace+'-email-next'))||0,Date.now()+3600000);
- const announce=(text,success=false)=>{message.textContent=text;message.hidden=!text;message.classList.toggle('success',success);};
- function render(){const loggedIn=!!getSession();$('#signed-out').hidden=loggedIn;$('#signed-in').hidden=!loggedIn;const remaining=Math.max(0,Math.ceil((cooldownUntil-Date.now())/1000));$('#send-link').disabled=busy||remaining>0;$('#send-link').textContent=remaining?`${remaining} 秒后可重新发送`:'发送一次登录链接';$('#password-login').disabled=busy;$('#save-password').disabled=busy;$('#logout').disabled=busy;}
- const rememberEmail=()=>safeWrite(namespace+'-email',email.value.trim().toLowerCase());
- const requireCloud=()=>{const client=getCloud();if(!client)throw Error('连接尚未准备好，请联网刷新，或检查高级连接设置。');return client;};
- $('#login-form').onsubmit=async event=>{
-  event.preventDefault();if(busy)return;
-  busy=true;announce('正在登录…');render();
-  try{const client=requireCloud();const data=await client.signInWithPassword(email.value.trim().toLowerCase(),$('#login-password').value);await commitSession(data,client);rememberEmail();announce('登录成功。这台设备会保持登录。',true);onSignedIn();}
-  catch(error){announce(authError(error));}
-  finally{$('#login-password').value='';busy=false;render();}
- };
- $('#send-link').onclick=async()=>{
-  if(busy||Date.now()<cooldownUntil||!email.reportValidity())return;
-  busy=true;announce('正在发送登录链接…');render();
-  try{await requireCloud().signIn(email.value.trim().toLowerCase());rememberEmail();cooldownUntil=Date.now()+60000;safeWrite(namespace+'-email-next',String(cooldownUntil));announce('登录链接已发送。请在这台设备的同一浏览器中打开邮件链接，登录后设置密码。',true);}
-  catch(error){if(error.status===429||/rate.limit/i.test(error.message)){cooldownUntil=Date.now()+Math.max(60,error.retryAfter||0)*1000;safeWrite(namespace+'-email-next',String(cooldownUntil));}announce(authError(error));}
-  finally{busy=false;render();}
- };
- $('#set-password-form').onsubmit=async event=>{
-  event.preventDefault();if(busy)return;
-  const password=$('#new-password').value,confirmation=$('#confirm-password').value;
-  const invalid=passwordError(password,confirmation);if(invalid)return announce(invalid);
-  if(!getSession())return announce('请先登录，再设置自己的密码。');
-  busy=true;announce('正在保存密码…');render();
-  try{await requireCloud().updatePassword(password,$('#current-password').value);announce('密码已设置。下次可直接用邮箱和密码登录，不需要登录邮件。',true);$('#password-settings').open=false;}
-  catch(error){announce(authError(error));}
-  finally{$('#new-password').value='';$('#confirm-password').value='';$('#current-password').value='';busy=false;render();}
- };
- const clearSecrets=()=>{for(const id of ['login-password','new-password','confirm-password','current-password'])$('#'+id).value='';announce('');};
+export function passwordError(password,confirmation){if(password.length<10)return '共用密码至少需要 10 位。';if(new TextEncoder().encode(password).length>72)return '密码过长，请缩短为 72 个英文字节以内（中文约 24 字）。';if(password!==confirmation)return '两次输入的密码不一致。';return '';}
+export function authError(error){const messages={wrong_password:'共用密码不正确，请向同行旅伴确认。',wrong_current_password:'原共用密码不正确。',locked:'解锁已失效，请输入共用密码重新解锁。',invalid_setup_link:'设置链接已失效，请联系创建者获取新的设置链接。',already_configured:'共用密码已经设置，请返回手册输入密码解锁。',not_configured:'共用密码尚未设置，请使用创建者的首次设置链接。',invalid_password_length:'共用密码至少 10 位，且不能超过 72 个英文字节。',too_many_attempts:'尝试次数过多，请稍后再试。',temporarily_unavailable:'云端暂时无法连接，请稍后重试。'};if(error.name==='TimeoutError'||error.name==='AbortError'||error instanceof TypeError)return '无法连接云端，请检查网络。首次解锁需要联网。';return messages[error.code]||error.message||'暂时无法解锁，请稍后重试。';}
+export function installAuth({getCloud,getSession,commitSession,onSignedIn}){
+ const $=s=>document.querySelector(s);let busy=false,configured=null,setupToken='',cooldownUntil=0;
+ const hash=new URLSearchParams(location.hash.slice(1));if(hash.has('setup')){setupToken=hash.get('setup')||'';history.replaceState(null,'',location.pathname+location.search);}
+ const announce=(text,success=false)=>{for(const id of ['gate-message','auth-message']){const node=$('#'+id);node.textContent=text;node.hidden=!text;node.classList.toggle('success',success);}};
+ function render(){const open=!!getSession();$('#access-gate').hidden=open;for(const id of ['app-header','app-main','app-footer'])$('#'+id).hidden=!open;$('#unlock-form').hidden=configured===false;$('#setup-form').hidden=!(configured===false&&setupToken);$('#gate-intro').textContent=configured===false?(setupToken?'设置一个五个人共用的密码。此链接只能使用一次。':'共用密码尚未设置，请使用创建者持有的首次设置链接。'):'输入共用密码，打开五个人的关西手册。无需邮箱或个人账号。';const remaining=Math.max(0,Math.ceil((cooldownUntil-Date.now())/1000));for(const id of ['unlock-button','setup-button','rotate-button','logout'])$('#'+id).disabled=busy||remaining>0;$('#unlock-button').textContent=remaining?`${remaining} 秒后再试`:'解锁旅行手册';}
+ async function run(action){if(busy||Date.now()<cooldownUntil)return;busy=true;announce('正在验证…');render();try{const client=getCloud();if(!client)throw Error('连接尚未准备好，请联网刷新。');const value=await action(client);await commitSession(value,client);configured=true;setupToken='';announce('手册已解锁，这台设备会记住解锁状态。',true);onSignedIn();}catch(error){if(error.status===429)cooldownUntil=Date.now()+Math.max(1,error.retryAfter||60)*1000;announce(authError(error));if(error.code==='already_configured'){configured=true;setupToken='';}}finally{clearSecrets(false);busy=false;render();}}
+ $('#unlock-form').onsubmit=e=>{e.preventDefault();const password=$('#shared-password').value;return run(client=>client.unlock(password));};
+ $('#setup-form').onsubmit=e=>{e.preventDefault();const password=$('#setup-password').value;const invalid=passwordError(password,$('#setup-confirm').value);if(invalid)return announce(invalid);return run(client=>client.setup(setupToken,password));};
+ $('#rotate-form').onsubmit=e=>{e.preventDefault();const password=$('#new-password').value,current=$('#current-password').value;const invalid=passwordError(password,$('#confirm-password').value);if(invalid)return announce(invalid);if(!confirm('更换共用密码后，其他设备需要用新密码重新解锁。继续吗？'))return;return run(client=>client.rotate(current,password));};
+ function clearSecrets(clearMessage=true){for(const id of ['shared-password','setup-password','setup-confirm','current-password','new-password','confirm-password'])$('#'+id).value='';if(clearMessage)announce('');}
+ async function initialize(){render();try{const status=await getCloud().status();configured=status.configured;}catch(error){if(!getSession())announce(authError(error));}render();}
  for(const button of document.querySelectorAll('[data-toggle-password]'))button.onclick=()=>{const input=document.getElementById(button.dataset.togglePassword);const reveal=input.type==='password';input.type=reveal?'text':'password';button.textContent=reveal?'隐藏':'显示';button.setAttribute('aria-pressed',String(reveal));};
- setInterval(render,1000);render();
- return {render,clearSecrets,get busy(){return busy;}};
+ setInterval(render,1000);render();return {render,initialize,clearSecrets,get busy(){return busy;}};
 }
