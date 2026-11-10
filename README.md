@@ -1,6 +1,6 @@
 # 大阪自由行 2027
 
-手机优先，奶油白与森林绿；2027 年 1 月 10–17 日，五人共用的旅行手册。
+手机优先，奶油白与森林绿；2027 年 1 月 9–17 日，五人共用的旅行手册。
 
 ## 共用密码
 
@@ -22,7 +22,7 @@
 
 ## 云端结构
 
-`supabase/functions/shared-trip` 是唯一的行程入口，使用共用密码和随机解锁凭证自行认证，因此部署时 `verify_jwt=false`。数据库只保存 bcrypt 密码哈希、凭证摘要、有效期和短期网络限流摘要，不为同行者创建个人账号。
+`supabase/functions/shared-trip` 是行程入口，使用共用密码和随机解锁凭证自行认证，因此部署时 `verify_jwt=false`。数据库只保存 bcrypt 密码哈希、凭证摘要、有效期和短期网络限流摘要，不为同行者创建个人账号。
 
 Edge Function 用运行环境中的后端密钥调用仅 `service_role` 可执行的 RPC。优先读取 `SUPABASE_SECRET_KEYS.default`，兼容旧的运行环境变量。任何后端密钥均不能进入客户端、源码或日志。公开 `config.js` 只包含项目 URL 与 publishable key。
 
@@ -75,3 +75,7 @@ GitHub Pages：Settings → Pages → Deploy from a branch → main → /(root)�
 开发测试：`npm ci` 后运行 `npm test`、`npm run test:db`。数据库测试在隔离的WASM PostgreSQL运行合成数据，密码学函数仅在测试夹具中替身，不改变生产加密。运行浏览器集成测试前用 `node node_modules/playwright-core/cli.js install webkit` 安装免费WebKit引擎；设QA_BROWSER=webkit后运行 `npm run test:browser`。Chrome通过CHROME_PATH指定已安装浏览器。生成的qa-results不入库，所有测试只使用合成行程和本地模拟接口，不读取真实凭证。
 
 本轮没有引入前端运行依赖；测试依赖仅为开发依赖，锁定版本，不在PWA缓存内。迁移已在隔离测试环境验证，安全回退保留兼容后端和新增数据。
+
+## V1.2
+
+详细用法、迁移顺序、限制和验收请参见 [V1.2-使用与验收.md](V1.2-使用与验收.md)。附件通过独立的 `trip-files` Edge Function 验证相同共用访问凭证。
