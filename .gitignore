@@ -2,3 +2,6 @@ private-itinerary.json
 *.zip
 .env*
 node_modules/
+
+qa-results/
+*private-backup*

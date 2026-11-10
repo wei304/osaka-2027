@@ -1,3 +1,4 @@
+function timeoutSignal(ms){const controller=new AbortController();setTimeout(()=>controller.abort(),ms);return controller.signal;}
 export class Cloud{
  constructor(config,session,onSession){this.config=config;this.session=session;this.onSession=onSession;}
  async request(action,body={},authenticated=true){
@@ -5,7 +6,7 @@ export class Cloud{
   if(authenticated&&(!token||this.session.expiresAt<=Date.now())){this.setSession(null);throw Object.assign(Error('locked'),{code:'locked',status:401});}
   const response=await fetch(this.config.url+'/functions/v1/shared-trip',{
    method:'POST',headers:{'Content-Type':'application/json',apikey:this.config.key,...(authenticated?{'X-Trip-Session':token}:{})},
-   body:JSON.stringify({action,...body}),signal:AbortSignal.timeout(15000)
+   body:JSON.stringify({action,...body}),signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(15000):timeoutSignal(15000)
   });
   const data=await response.json().catch(()=>({error:'temporarily_unavailable'}));
   if(!response.ok){if(authenticated&&['locked','not_configured'].includes(data.error)&&this.session?.token===token)this.setSession(null);throw Object.assign(Error(data.error||'temporarily_unavailable'),{code:data.error,status:response.status,retryAfter:Number(response.headers.get('Retry-After'))||data.retryAfter||0});}
