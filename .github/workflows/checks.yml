@@ -1,7 +1,7 @@
 name: Regression checks
 on: [push, pull_request, workflow_dispatch]
 permissions:
-  contents: write
+  contents: read
 jobs:
   regression:
     runs-on: ubuntu-latest
@@ -15,8 +15,46 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
       - run: npm run test:db
+  browsers:
+    needs: regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chrome, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - if: matrix.engine == 'chrome'
+        run: node node_modules/playwright-core/cli.js install --with-deps --only-shell chromium
+      - if: matrix.engine == 'webkit'
+        run: node node_modules/playwright-core/cli.js install --with-deps webkit
+      - run: npm run test:browser
+        env:
+          QA_BROWSER: ${{ matrix.engine }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-${{ matrix.engine }}
+          path: qa-results/
+          retention-days: 7
+  release:
+    needs: [regression, browsers]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - name: Tag verified release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           release_tag="v$(node -p 'require("./package.json").version')"

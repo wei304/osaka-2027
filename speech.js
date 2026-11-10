@@ -1,0 +1,7 @@
+import {PHRASES} from './phrases.js';
+export function japaneseVoices(synth){try{return (synth?.getVoices()||[]).filter(v=>/^ja(?:-|$)/i.test(v.lang||'')).sort((a,b)=>Number(b.localService)-Number(a.localService));}catch{return [];}}
+export function installSpeech({toast,refresh}){const synth=globalThis.speechSynthesis;let speaking=null;
+ function status(){const el=document.querySelector('#speech-status');if(el)el.textContent=!synth?'此浏览器不支持设备语音，请直接展示日文或复制。':japaneseVoices(synth).length?'已找到设备日语声音；离线可用性取决于设备是否下载声音。':'设备暂未提供日语声音。请在系统下载日语语音后重新打开；不会改用英语朗读。';}
+ function bind(root){const voices=japaneseVoices(synth);root.querySelectorAll('[data-speak-phrase]').forEach(b=>{b.disabled=!voices.length;b.onclick=()=>{try{const phrase=PHRASES.find(p=>p.id===Number(b.dataset.speakPhrase)),voice=japaneseVoices(synth)[0];if(!voice||!globalThis.SpeechSynthesisUtterance)return toast('设备日语声音不可用，请查看系统语音设置。');synth.cancel();speaking=new SpeechSynthesisUtterance(phrase.ja);speaking.voice=voice;speaking.lang='ja-JP';speaking.rate=0.85;speaking.onerror=()=>{toast('日语播放失败，请检查设备声音、网络及日语语音包；也可直接展示文字。');speaking=null;status();};speaking.onend=()=>{speaking=null;status();};synth.speak(speaking);const el=document.querySelector('#speech-status');if(el)el.textContent='正在播放日语…';}catch{toast('此设备无法播放日语，请复制或展示文字。');}};});}
+ const change=()=>{status();refresh();};synth?.addEventListener?.('voiceschanged',change);document.querySelector('#stop-speech').onclick=()=>{synth?.cancel();speaking=null;status();};status();return {bind,stop(){synth?.cancel();speaking=null;status();}};
+}

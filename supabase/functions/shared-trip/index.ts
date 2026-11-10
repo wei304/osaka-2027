@@ -1,3 +1,4 @@
+import {loadReference} from './exchange.js';
 import {makeHandler} from './handler.js';
 const url=Deno.env.get('SUPABASE_URL')||'';
 let modernKeys:Record<string,string>={};
@@ -7,6 +8,7 @@ const encoder=new TextEncoder();
 const hmacKey=key?crypto.subtle.importKey('raw',encoder.encode(key),{name:'HMAC',hash:'SHA-256'},false,['sign']):null;
 const rpc=async(action:string,body:unknown,network:string)=>{
  if(!url||!key)throw Error('server_not_ready');
+ if(action==='exchange_rate')return loadReference({rpc,token:(body as {token:string}).token});
  const response=await fetch(url+'/rest/v1/rpc/shared_trip_request',{
   method:'POST',headers:{apikey:key,'Content-Type':'application/json',...(key.startsWith('ey')?{Authorization:'Bearer '+key}:{})},
   body:JSON.stringify({p_action:action,p_body:body,p_network:network}),signal:AbortSignal.timeout(12000)

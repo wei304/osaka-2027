@@ -5,10 +5,10 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "start": "python -m http.server 8080",
-    "test:db": "node qa/migration.mjs",
-    "test:browser": "node qa/browser.mjs"
+    "test:db": "node qa/migration-v12.mjs",
+    "test:browser": "node qa/browser-v12.mjs"
   },
-  "version": "1.1.0",
+  "version": "1.2.0",
   "devDependencies": {
     "@electric-sql/pglite": "0.5.16",
     "playwright-core": "1.65.0"
