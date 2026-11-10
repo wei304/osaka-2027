@@ -94,8 +94,8 @@ begin
   return jsonb_build_object('rows',rows_json);
  end if;
  if p_action='history' then
-  select coalesce(jsonb_agg(jsonb_build_object('id',id,'item_id',item_id,'payload',payload,'version',version,'created_at',created_at) order by created_at desc),'[]'::jsonb) into rows_json
-   from (select id,item_id,payload,version,created_at from public.trip_revisions where trip_id=gate.trip_id order by created_at desc limit 100) recent;
+  select coalesce(jsonb_agg(jsonb_build_object('id',recent.id,'item_id',recent.item_id,'payload',recent.payload,'version',recent.version,'created_at',recent.created_at) order by recent.created_at desc),'[]'::jsonb) into rows_json
+   from (select h.id,h.item_id,h.payload,h.version,h.created_at from public.trip_revisions h where h.trip_id=gate.trip_id order by h.created_at desc limit 100) recent;
   return jsonb_build_object('revisions',rows_json);
  end if;
  if p_action<>'apply' then return jsonb_build_object('status',400,'error','invalid_action'); end if;

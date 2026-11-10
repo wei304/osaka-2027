@@ -8,7 +8,7 @@ export class Cloud{
    body:JSON.stringify({action,...body}),signal:AbortSignal.timeout(15000)
   });
   const data=await response.json().catch(()=>({error:'temporarily_unavailable'}));
-  if(!response.ok){if(response.status===401&&data.error==='locked'&&this.session?.token===token)this.setSession(null);throw Object.assign(Error(data.error||'temporarily_unavailable'),{code:data.error,status:response.status,retryAfter:Number(response.headers.get('Retry-After'))||data.retryAfter||0});}
+  if(!response.ok){if(authenticated&&['locked','not_configured'].includes(data.error)&&this.session?.token===token)this.setSession(null);throw Object.assign(Error(data.error||'temporarily_unavailable'),{code:data.error,status:response.status,retryAfter:Number(response.headers.get('Retry-After'))||data.retryAfter||0});}
   return data;
  }
  setSession(value){this.session=value?{token:value.token,expiresAt:value.expiresAt}:null;this.onSession(this.session);}

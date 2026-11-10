@@ -23,7 +23,7 @@ $('#edit-form').onsubmit=e=>{e.preventDefault();try{const id=$('#item-id').value
 $('#delete-item').onclick=()=>{const item=visibleItems(state).find(i=>i.id===$('#item-id').value);if(item&&confirm(`删除“${item.title}”？可在版本记录恢复。`)){saveItem({...item,deleted:true});$('#editor').close();}};
 $('#close-editor').onclick=()=>$('#editor').close();$('#add-item').onclick=()=>edit();$('#search').oninput=render;$('#pending-only').onchange=render;$$('.tabs button').forEach(b=>b.onclick=()=>selectTab(b.dataset.tab));$('#connection').onclick=()=>selectTab('settings');
 $('#item-day').innerHTML=DAYS.map(d=>`<option value="${d.date}">1 月 ${d.day} 日</option>`).join('');
-function setupCloud(){if(!config){cloud=null;return;}const client=new Cloud(config,session,s=>{if(cloud!==client)return;session=s;if(s)localStorage.setItem(SESSION,JSON.stringify(s));else{localStorage.removeItem(SESSION);authUI?.clearSecrets();syncError='解锁已失效，请输入共用密码。';$('#editor').close();}renderStatus();});cloud=client;}
+function setupCloud(){if(!config){cloud=null;return;}const client=new Cloud(config,session,s=>{if(cloud!==client)return;session=s;if(s){try{localStorage.setItem(SESSION,JSON.stringify(s));}catch{toast('当前设备无法记住解锁状态，关闭页面后需重新输入密码。');}}else{try{localStorage.removeItem(SESSION);}catch{}authUI?.clearSecrets();syncError='解锁已失效，请输入共用密码。';$('#editor').close();}renderStatus();});cloud=client;}
 $('#logout').onclick=async()=>{if(syncing||authUI?.busy)return toast('正在同步或验证，请稍后锁定。');if(state.queue.length&&!confirm('还有未同步修改。请先导出备份；现在锁定会清除本机行程。继续吗？'))return;identityGeneration++;try{if(cloud&&session&&navigator.onLine)await cloud.lock();}catch{}session=null;authUI?.clearSecrets();state=emptyState();cloudHistory=[];localStorage.removeItem(SESSION);persist();setupCloud();$('#items').innerHTML='';$('#essential-items').innerHTML='';$('#history-list').innerHTML='';render();toast('已锁定并清除本机行程。');};
 let identityGeneration=0;
 authUI=installAuth({getCloud:()=>{if(externalChange)throw Error('另一页面已更新资料，请刷新后继续。');return cloud;},getSession:()=>session,namespace:KEY,
@@ -42,8 +42,8 @@ window.addEventListener('storage',e=>{if([KEY,SESSION,CONFIG].includes(e.key)){e
 window.addEventListener('online',()=>{renderStatus();void sync();});window.addEventListener('offline',renderStatus);window.addEventListener('focus',()=>void sync());setInterval(()=>void sync(),15000);
 let installPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('#install').hidden=false;});$('#install').onclick=async()=>{await installPrompt?.prompt();$('#install').hidden=true;};
 async function start(){
- for(const key of [KEY+'-session',KEY+'-email',KEY+'-email-next'])localStorage.removeItem(key);
- setupCloud();await authUI.initialize();render();
+ for(const key of [KEY+'-session',KEY+'-email',KEY+'-email-next']){try{localStorage.removeItem(key);}catch{}}
+ setupCloud();render();await authUI.initialize();render();
  if('serviceWorker'in navigator){try{await navigator.serviceWorker.register('./sw.js');await navigator.serviceWorker.ready;$('#offline-status').textContent='手册已缓存。这台已解锁的设备可离线查看与编辑；地图与云端同步需要网络。';}catch{$('#offline-status').textContent='离线缓存尚未成功，请联网刷新后重试。';}}
  void sync();
 }
