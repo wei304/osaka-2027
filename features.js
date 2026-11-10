@@ -1,3 +1,4 @@
+import {isChoice} from './schedule.js';
 // Ledger entries use the same password-gated, versioned sync queue as itinerary notes.
 export const LEDGER_PREFIX='【五人账本 v1】\n';
 export const MEMBER_IDS=['p1','p2','p3','p4','p5'];
@@ -13,4 +14,4 @@ export function ledgerItem({id,day,title,data,notes='',order=Date.now()}){return
 export function mapQuery(item){return item.notes?.match(/^【地图定位】([^\n]+)$/m)?.[1]?.trim()||`${item.ja||item.title} 日本`;}
 export function mapUrl(item,mode='search',origin=null){const p=new URLSearchParams({api:'1'});if(mode==='search')p.set('query',mapQuery(item));else{p.set('destination',mapQuery(item));p.set('travelmode',mode==='walking'?'walking':'transit');if(origin)p.set('origin',mapQuery(origin));}return `https://www.google.com/maps/${mode==='search'?'search':'dir'}/?${p}`;}
 export function priority(item){const current=(item.notes||'').split('【原有计划记录')[0];return /已确认日期冲突|高风险|当天不可/.test(current)?2:/待订单确认|待确认店铺身份|尚未核实|仍待新季/.test(current)?1:0;}
-export function pendingItems(items){return items.filter(i=>!isLedger(i)&&(i.status==='pending'||priority(i)===2)).sort((a,b)=>priority(b)-priority(a)||a.day.localeCompare(b.day)||(a.order||0)-(b.order||0));}
+export function pendingItems(items){return items.filter(i=>!isLedger(i)&&!isChoice(i)&&(i.status==='pending'||priority(i)===2)).sort((a,b)=>priority(b)-priority(a)||a.day.localeCompare(b.day)||(a.order||0)-(b.order||0));}
