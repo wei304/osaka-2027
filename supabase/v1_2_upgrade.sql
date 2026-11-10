@@ -16,7 +16,7 @@ begin
  for entry in select * from jsonb_array_elements(p_body->'entries') loop
   if coalesce(entry->>'expected','')!~'^[0-9]{1,9}$' then return jsonb_build_object('status',400,'error','invalid_batch');end if;
   select * into current_row from public.trip_items where trip_id='osaka-2027' and id=entry->'item'->>'id';
-  if found then rows_json:=rows_json||jsonb_build_array(jsonb_build_object('id',current_row.id,'payload',current_row.payload,'version',current_row.version));before_json:=before_json||jsonb_build_array(current_row.payload);end if;
+  if found then rows_json:=rows_json||jsonb_build_array(jsonb_build_object('id',current_row.id,'payload',current_row.payload,'version',current_row.version));before_json:=before_json||jsonb_build_array(current_row.payload);else before_json:=before_json||jsonb_build_array((entry->'item')||jsonb_build_object('deleted',true));end if;
  end loop;
  for entry in select * from jsonb_array_elements(p_body->'entries') loop
   select * into current_row from public.trip_items where trip_id='osaka-2027' and id=entry->'item'->>'id';
@@ -98,4 +98,9 @@ grant execute on function private.trip_file_request(text,jsonb),public.trip_file
 
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values('osaka-tickets','osaka-tickets',false,5242880,array['application/pdf','image/jpeg','image/png','image/webp']) on conflict(id) do nothing;
 do $$begin if exists(select 1 from storage.buckets where id='osaka-tickets' and public) then raise exception 'Ticket bucket must remain private';end if;end$$;
+do $$begin
+ if not exists(select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='osaka_tickets_no_direct_client_access') then
+  create policy osaka_tickets_no_direct_client_access on storage.objects as restrictive for all to anon,authenticated using(bucket_id<>'osaka-tickets') with check(bucket_id<>'osaka-tickets');
+ end if;
+end$$;
 commit;

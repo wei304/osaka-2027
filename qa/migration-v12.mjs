@@ -1,3 +1,4 @@
+import {restorePayload} from '../advanced.js';
 import {PGlite} from '@electric-sql/pglite';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
@@ -37,15 +38,16 @@ const hasGrant=(await db.query(`select has_function_privilege('anon','private.sh
 await db.exec(fs.readFileSync(new URL('../supabase/v1_1_rollback_safe.sql',import.meta.url),'utf8'));
 console.log('PASS V1.1 baseline PostgreSQL: additive migration, Jan 9, legacy metadata preservation, explicit completion reset, idempotent retries, conflict handling, history, anonymous denial, safe rollback verification.');
 console.log('Crypto is stubbed only in the isolated fixture; production crypto and real credentials were not changed or copied.');
-await db.exec(`create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);`);
+await db.exec(`create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(bucket_id text,name text);alter table storage.objects enable row level security;`);
 await db.exec(fs.readFileSync(new URL('../supabase/v1_2_upgrade.sql',import.meta.url),'utf8'));
 await db.exec(fs.readFileSync(new URL('../supabase/v1_2_exchange.sql',import.meta.url),'utf8'));
 await db.exec(fs.readFileSync(new URL('../supabase/v1_2_shared_rpc.sql',import.meta.url),'utf8'));
 const rowsBefore=(await db.query(`select count(*)::int n from public.trip_revisions`)).rows[0].n;
 const current1=(await db.query(`select payload,version from public.trip_items where id='synthetic-legacy'`)).rows[0];
 const current2=(await db.query(`select payload,version from public.trip_items where id='synthetic-departure'`)).rows[0];
+current1.payload.notes='【安排建议 v1】'+JSON.stringify({end:'12:00'})+'\nOriginal';await db.query(`update public.trip_items set payload=$1 where id='synthetic-legacy'`,[current1.payload]);
 const operationBatch=crypto.randomUUID();
-const entries=[{item:{...current1.payload,title:'batch title'},expected:current1.version},{item:{...current2.payload,title:'batch departure'},expected:current2.version}];
+const entries=[{item:{...current1.payload,title:'batch title',notes:'【安排建议 v1】'+JSON.stringify({end:'12:00',manualRank:1})+'\nOriginal'},expected:current1.version},{item:{...current2.payload,title:'batch departure'},expected:current2.version}];
 const batch=async(entries,operation=crypto.randomUUID())=>(await db.query(`select private.shared_trip_request('apply_batch',$1::jsonb,'') r`,[JSON.stringify({token,entries,operation})])).rows[0].r;
 const applied=await batch(entries,operationBatch);assert.equal(applied.conflict,false);assert.equal(applied.rows.length,2);assert.equal((await batch(entries,operationBatch)).rows[0].version,applied.rows[0].version);
 assert.equal((await db.query(`select count(*)::int n from public.trip_revisions`)).rows[0].n,rowsBefore+2);
@@ -53,6 +55,7 @@ const conflict=await batch([{item:entries[0].item,expected:applied.rows[0].versi
 const bad=await batch([{item:entries[0].item,expected:applied.rows[0].version},{item:{...entries[1].item,title:''},expected:applied.rows[1].version}]);assert.equal(bad.error,'batch_rejected');
 assert.equal((await db.query(`select version from public.trip_items where id='synthetic-legacy'`)).rows[0].version,applied.rows[0].version,'partial batch leaked');
 assert.equal((await batch([{item:{...entries[0].item,title:'tampered'},expected:1}],operationBatch)).error,'operation_reused');
+const undoBatch=await batch(applied.before.map(before=>({item:restorePayload(before,applied.rows.find(r=>r.id===before.id).payload),expected:applied.rows.find(r=>r.id===before.id).version})));assert.equal(undoBatch.conflict,false);assert.match(undoBatch.rows.find(r=>r.id==='synthetic-legacy').payload.notes,/"manualRank": null/);
 const ticket={...original,id:'ticket-synthetic',notes:'【旅行票券 v1】\n'+JSON.stringify({useDate:'2027-01-10',booking:'pending'})};assert.equal((await apply(ticket,0)).row.version,1);
 const fileId=crypto.randomUUID();const files=async(action,body={})=>(await db.query(`select private.trip_file_request($1,$2::jsonb) r`,[action,JSON.stringify({token,...body})])).rows[0].r;
 const reserved=await files('reserve',{fileId,ticketId:ticket.id,name:'ticket.pdf',type:'application/pdf',bytes:20,hash:'a'.repeat(64)});assert.equal(reserved.file.status,'pending');
@@ -65,7 +68,7 @@ assert.equal((await db.query(`select count(*)::int n from private.trip_file_revi
 const denied=(await db.query(`select private.trip_file_request('list','{}') r`)).rows[0].r;assert.equal(denied.error,'locked');
 assert.equal((await db.query(`select has_function_privilege('anon','public.trip_file_request(text,jsonb)','execute') allowed`)).rows[0].allowed,false);
 assert.equal((await db.query(`select public from storage.buckets where id='osaka-tickets'`)).rows[0].public,false);
-assert.equal((await db.query(`select count(*)::int n from private.trip_batches`)).rows[0].n,1);
+assert.equal((await db.query(`select count(*)::int n from private.trip_batches`)).rows[0].n,2);
 const quote={yenPerMyr:40,quoteDate:'2026-11-10',source:'欧洲央行日参考'};assert.equal((await db.query(`select private.shared_trip_request('exchange_cache_put',$1::jsonb,'') r`,[JSON.stringify({token,quote})])).rows[0].r.ok,true);assert.equal((await db.query(`select private.shared_trip_request('exchange_cache_get',$1::jsonb,'') r`,[JSON.stringify({token})])).rows[0].r.stale,false);
 console.log('PASS V1.2 isolated PostgreSQL: atomic all-or-none batch, idempotency, stale versions, private file reserve/hash/finalize/list, removal/restore history, anonymous denial and private bucket.');
 
