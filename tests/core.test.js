@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {emptyState,validateItem,enqueue,acceptResult,visibleItems,mergeRemote} from '../core.js';
+const item=(extra={})=>({id:'a',day:'2027-01-10',title:'道顿堀',category:'spot',status:'pending',notes:'初版',...extra});
+test('rejects wrong dates and malformed time before import',()=>{assert.throws(()=>validateItem(item({day:'2027-01-18'})));assert.throws(()=>validateItem(item({time:'25:99'})));assert.throws(()=>validateItem(item({title:{}})));});
+test('offline edits coalesce and preserve latest visible text',()=>{const s=emptyState();enqueue(s,item());enqueue(s,item({notes:'第二版'}));assert.equal(s.queue.length,1);assert.equal(visibleItems(s)[0].notes,'第二版');assert.equal(s.history.length,2);});
+test('in-flight edits stay separate and advance after acknowledgment',()=>{const s=emptyState();const op=enqueue(s,item());enqueue(s,item({notes:'网络请求期间编辑'}),op.id);assert.equal(s.queue.length,2);acceptResult(s,op,{...op.item,version:1});assert.equal(s.queue.length,1);assert.equal(s.queue[0].baseVersion,1);assert.equal(visibleItems(s)[0].notes,'网络请求期间编辑');});
+test('cloud refresh cannot replace pending offline edit',()=>{const s=emptyState();s.items=[{...item(),version:2}];enqueue(s,item({notes:'本机内容'}));mergeRemote(s,[{...item({notes:'其他成员'}),version:3}]);assert.equal(visibleItems(s)[0].notes,'本机内容');assert.equal(s.queue[0].baseVersion,2);assert.equal(s.items[0].version,3);});
+test('delete remains hidden and history can restore',()=>{const s=emptyState();s.items=[{...item(),version:1}];enqueue(s,item({deleted:true}));assert.equal(visibleItems(s).length,0);enqueue(s,item({deleted:false}));assert.equal(visibleItems(s).length,1);});
+test('stale cloud responses do not reduce known version',()=>{const s=emptyState();s.items=[{...item(),version:5}];mergeRemote(s,[{...item(),version:3}]);assert.equal(s.items[0].version,5);});

@@ -1,0 +1,4 @@
+private-itinerary.json
+*.zip
+.env*
+node_modules/
