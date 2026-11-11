@@ -95,3 +95,9 @@ GitHub Pages：Settings → Pages → Deploy from a branch → main → /(root)�
 ## V1.4.1 AI与人民币预算
 
 [AI预算与安全迁移说明](AI-ACTIVATION.md)。平日每日¥2，2027年1月9日至17日每日¥10；AI助手内滑条可调整0–10元，五人共用，服务端执行额度限制。密钥仅保存在Supabase Secrets。实际可用状态请在AI助手检查，首次真实调用需验证密钥及余额。
+
+## V1.4.3 语音输入
+
+AI助手新增浏览器语音转文字（普通话/日语/英语）：开始、结束、预览、采用、取消。采用只追加文字并取消发送同意勾选，仍需手动发送AI。切页、隐藏页面、锁定时终止识别并清空预览；录音不存储、不上传到本项目后台。浏览器可能使用自己的在线服务，不保证手机Edge/Chrome/Safari实机可用，不支持时提示键盘麦克风。未引入付费转写服务。
+
+识别兼容性与数据处理依据：[MDN SpeechRecognition](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition)。
