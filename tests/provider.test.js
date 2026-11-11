@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {chatRequest,completeJSON} from '../supabase/functions/ai-trip/provider.js';
+test('provider requests use approved Flash, JSON, non-thinking mode and bounded output',()=>{const r=chatRequest('deepseek-flash','system','input',9999);assert.equal(r.thinking.type,'disabled');assert.equal(r.max_tokens,1200);assert.equal(r.response_format.type,'json_object');assert.equal(r.stream,false);assert.throws(()=>chatRequest('deepseek-v4-pro','x','y',1200),/unapproved/);});
+test('mock provider round-trip retains usage and never calls outside the fixed official URL',async()=>{const result=await completeJSON({key:'synthetic-test-key',model:'deepseek-flash',system:'x',input:'y',maxTokens:500,fetcher:async(url,o)=>{assert.equal(url,'https://api.deepseek.com/chat/completions');assert.equal(JSON.parse(o.body).thinking.type,'disabled');return new Response(JSON.stringify({choices:[{message:{content:'{"answer":"模拟"}'},finish_reason:'stop'}],usage:{total_tokens:50}}));}});assert.equal(result.usage.total_tokens,50);assert.equal(result.finish,'stop');});
+test('invalid credentials, empty balances and rate limits produce safe actionable errors',async()=>{for(const [status,error]of [[401,'credentials_invalid'],[402,'balance_required'],[429,'rate_limit']])await assert.rejects(completeJSON({key:'synthetic-secret-not-to-be-logged',model:'deepseek-flash',system:'x',input:'y',maxTokens:500,fetcher:async()=>new Response('private provider details',{status})}),e=>e.message.includes(error)&&!e.message.includes('synthetic')&&!e.message.includes('private'));});
+
+import {makeAIHandler} from '../supabase/functions/ai-trip/handler.js';
+test('budget configuration is authenticated and available with paid AI disabled, without provider calls',async()=>{
+ let calls=0;const actions=[];const handler=makeAIHandler({enabled:false,complete:async()=>{calls++;},rpc:async(action,b)=>{actions.push(action);if(action==='status')return {enabled:false,policyOn:false};assert.equal(action,'budget_save');assert.equal(b.expected,1);return {ok:true,budgetVersion:2};}});
+ const req=token=>new Request('https://example.test',{method:'POST',headers:{'Content-Type':'application/json',...(token?{'x-trip-session':token}:{})},body:JSON.stringify({action:'budget_save',expected:1,normalCny:2,travelCny:10,enabled:true})});
+ assert.equal((await handler(req())).status,401);assert.deepEqual(actions,[]);const result=await handler(req('a'.repeat(64)));assert.equal(result.status,200);assert.equal((await result.json()).budgetVersion,2);assert.equal(calls,0);assert.deepEqual(actions,['status','budget_save']);
+});
