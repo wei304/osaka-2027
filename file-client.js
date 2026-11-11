@@ -12,3 +12,5 @@ export class FileClient{
  async remove(f,restore=false){await this.request({action:restore?'restore':'remove',fileId:f.id,expected:f.version});await cached('delete',f.id).catch(()=>{});return this.refresh();}
  async clear(){this.generation++;this.files=[];await clearPrivateFiles();}
 }
+
+export async function offlineFileStatus(files){if(files===null)return null;return Promise.all(files.filter(f=>f.status==='ready').map(async f=>{const saved=await cached('get',f.id);return {id:f.id,version:f.version,available:!!saved&&saved.version===f.version&&!!(saved.bytes||saved.blob)};}));}
