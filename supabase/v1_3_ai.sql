@@ -67,7 +67,7 @@ begin
   if p_action='snapshot' then return jsonb_build_object('rows',scope,'scopeHash',scope_hash,'japanToday',current_day,'budget',case when p_body->>'shareBudget'='true' then private.ai_budget(days) else null end);end if;
   if p_body->>'scopeHash' is distinct from scope_hash then return jsonb_build_object('status',409,'error','draft_stale');end if;
   if p_body->>'task' not in ('ask','translate','conflicts','brief','edit') then return jsonb_build_object('status',400,'error','invalid_task');end if;
-  v_cache_key:=md5(current_day::text||scope_hash||coalesce(p_body->>'model','unknown')||coalesce(p_body->>'task','')||coalesce(p_body->>'prompt',''));
+  v_cache_key:=md5(current_day::text||days::text||scope_hash||coalesce(p_body->>'model','unknown')||coalesce(p_body->>'task','')||coalesce(p_body->>'prompt',''));
   if p_body->>'cache'='true' and p_body->>'task'='brief' then select u1.result into previous from private.ai_usage u1 where u1.cache_key=v_cache_key and u1.cacheable and u1.status='done' and (u1.created_at at time zone 'Asia/Tokyo')::date=current_day order by created_at desc limit 1;if found then return jsonb_build_object('cached',previous);end if;end if;
   update private.ai_usage set status='failed',snapshot='[]' where status='pending' and created_at<=now()-interval '90 seconds';
   if exists(select 1 from private.ai_usage where status='pending' and created_at>now()-interval '90 seconds') then return jsonb_build_object('status',429,'error','ai_busy');end if;

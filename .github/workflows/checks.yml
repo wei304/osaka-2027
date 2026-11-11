@@ -76,3 +76,16 @@ jobs:
             git tag "$release_tag"
             git push origin "refs/tags/$release_tag"
           fi
+
+  live-smoke:
+    needs: release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify public release and anonymous denial without AI calls
+        run: node qa/live-smoke.mjs

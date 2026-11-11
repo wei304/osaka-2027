@@ -104,6 +104,7 @@ const {scope:briefScope,reservation:briefReservation}=await startRequest('brief'
 const cachedBrief=await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'brief',prompt:'brief1',inputBytes:500,cache:true});assert.equal(cachedBrief.cached.answer,'cached brief');
 await db.exec(`update private.ai_policy set daily_requests=1`);assert.equal((await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'ask',prompt:'limit',inputBytes:500})).error,'ai_rate_limit');await db.exec(`update private.ai_usage set created_at=now()-interval '20 seconds'`);assert.equal((await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'ask',prompt:'limit',inputBytes:500})).error,'ai_daily_limit');
 
+assert.equal((await ai('reserve',{days:['2027-01-11'],scopeHash:(await ai('snapshot',{days:['2027-01-11']})).scopeHash,task:'brief',prompt:'brief1',inputBytes:500,cache:true})).cached,undefined,'brief cache leaked across selected dates');
 // The conservative token and money limits are independent of the request limit.
 await db.exec(`update private.ai_policy set daily_requests=100,daily_tokens=16000;update private.ai_usage set charged_tokens=16000`);
 assert.equal((await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'ask',prompt:'tokens',inputBytes:500})).error,'ai_daily_limit');
