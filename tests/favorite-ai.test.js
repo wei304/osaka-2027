@@ -10,6 +10,7 @@ test('favorite JSON-mode request satisfies the provider requirement without depe
 });
 test('favorite model schema rejects invented addresses, regions, coordinates, unknown IDs and unsupported dates',()=>{
  for(const row of [null,42,{...suggestion,address:'invented'},{...suggestion,region:'京都'},{...suggestion,lat:34},{...suggestion,id:'another'},{...suggestion,days:['2027-01-13']},{...suggestion,type:'机场餐厅'},{...suggestion,confidence:'high'},{...suggestion,type:null}])assert.throws(()=>validateFavoriteAI({places:[row]},[p]));
+ assert.throws(()=>validateFavoriteAI({places:[]},[p]));
  assert.throws(()=>validateFavoriteAI({places:[suggestion],instructions:'write'},[p]));assert.deepEqual(validateFavoriteAI({places:[suggestion]},[p]),[suggestion]);
 });
 test('date recommendations must be a unique subset of verified eligible dates for that exact place',()=>{
