@@ -9,9 +9,10 @@ const hmacKey=key?crypto.subtle.importKey('raw',encoder.encode(key),{name:'HMAC'
 const rpc=async(action:string,body:unknown,network:string)=>{
  if(!url||!key)throw Error('server_not_ready');
  if(action==='exchange_rate')return loadReference({rpc,token:(body as {token:string}).token});
- const response=await fetch(url+'/rest/v1/rpc/shared_trip_request',{
+ const favorite=action.startsWith('favorites_');
+ const response=await fetch(url+'/rest/v1/rpc/'+(favorite?'favorite_request':'shared_trip_request'),{
   method:'POST',headers:{apikey:key,'Content-Type':'application/json',...(key.startsWith('ey')?{Authorization:'Bearer '+key}:{})},
-  body:JSON.stringify({p_action:action,p_body:body,p_network:network}),signal:AbortSignal.timeout(12000)
+  body:JSON.stringify(favorite?{p_action:action.slice(10),p_body:body}:{p_action:action,p_body:body,p_network:network}),signal:AbortSignal.timeout(12000)
  });
  if(!response.ok)throw Error('database_unavailable');
  return response.json();
