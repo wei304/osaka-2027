@@ -1,6 +1,7 @@
 import {validateItem} from '../../../core.js';
+import {normalizeFavoriteRow,validateFavoriteEdit} from '../../../favorites-core.js';
 const ORIGIN='https://wei304.github.io';
-const ACTIONS=new Set(['status','setup','unlock','check','rows','history','apply','apply_batch','exchange_rate','rotate','lock']);
+const ACTIONS=new Set(['status','setup','unlock','check','rows','history','apply','apply_batch','exchange_rate','rotate','lock','favorites_rows','favorites_preview','favorites_import','favorites_edit','favorites_history','favorites_restore','favorites_undo_import','favorites_link_days']);
 const SECRET_ACTIONS=new Set(['setup','unlock','rotate']);
 const MAX_BYTES=48000;
 async function readBody(request){
@@ -44,6 +45,10 @@ export function makeHandler({rpc,networkHash}){
     if(!Number.isSafeInteger(body.expected)||body.expected<0||body.expected>999999999||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(body.operation||''))return reply({error:'invalid_item'},400);
     try{if(!body.item?.id)return reply({error:'invalid_item'},400);body.item=validateItem(body.item);}catch{return reply({error:'invalid_item'},400);}
    }
+   if(action==='favorites_preview'||action==='favorites_import'){
+    try{if(!Array.isArray(body.rows)||body.rows.length<1||body.rows.length>1000||typeof body.source!=='string'||!body.source.trim()||body.source.length>160||!/^[a-f0-9]{64}$/.test(body.fileHash||''))throw Error();body.source=body.source.trim();body.rows=body.rows.map(normalizeFavoriteRow);}catch{return reply({error:'invalid_import'},400);}
+   }
+   if(action==='favorites_edit'){try{body.patch=validateFavoriteEdit(body.patch);}catch{return reply({error:'invalid_favorite'},400);}}
    const result=await rpc(action,body,SECRET_ACTIONS.has(action)?await networkHash(request):'');
    const {status=200,...payload}=result;return reply(payload,status);
   }catch(error){if(error.status)return reply({error:error.message},error.status);return reply({error:'temporarily_unavailable'},503);}

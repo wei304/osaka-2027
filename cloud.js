@@ -5,7 +5,7 @@ export class Cloud{
   const token=this.session?.token;
   if(authenticated&&(!token||this.session.expiresAt<=Date.now())){this.setSession(null);throw Object.assign(Error('locked'),{code:'locked',status:401});}
   const response=await fetch(this.config.url+'/functions/v1/shared-trip',{
-   method:'POST',headers:{'Content-Type':'application/json',apikey:this.config.key,...(authenticated?{'X-Trip-Session':token}:{}),...(action==='apply_batch'?{'X-Trip-Batch':'1'}:{})},
+   method:'POST',headers:{'Content-Type':'application/json',apikey:this.config.key,...(authenticated?{'X-Trip-Session':token}:{}),...(action==='apply_batch'||action.startsWith('favorites_')?{'X-Trip-Batch':'1'}:{})},
    body:JSON.stringify({action,...body}),signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(15000):timeoutSignal(15000)
   });
   const data=await response.json().catch(()=>({error:'temporarily_unavailable'}));
