@@ -79,3 +79,7 @@ GitHub Pages：Settings → Pages → Deploy from a branch → main → /(root)�
 ## V1.2
 
 详细用法、迁移顺序、限制和验收请参见 [V1.2-使用与验收.md](V1.2-使用与验收.md)。附件通过独立的 `trip-files` Edge Function 验证相同共用访问凭证。
+
+## V1.3
+
+[AI助手、安全草案与默认关闭说明](V1.3-使用与验收.md)。本次不启用DeepSeek付费调用，日后另行确认预算并配置服务端密钥。
