@@ -142,9 +142,9 @@ const guardScope=await scopeRows(),fixedRow=guardScope.rows.find(r=>r.id==='r-a'
 const shares=async(action,body={})=>(await db.query(`select private.share_trip_request($1,$2::jsonb) r`,[action,JSON.stringify({token,...body})])).rows[0].r;
 assert.equal((await db.query(`select has_function_privilege('anon','public.share_trip_request(text,jsonb)','execute') p`)).rows[0].p,false);
 assert.equal((await shares('preview',{days:routeDays,ids:['r-a'],fields:['title','notes']})).error,'invalid_selection');
-assert.equal((await shares('preview',{days:['2027-01-10'],ids:['ticket-synthetic'],fields:['title']})).error,'selection_changed_or_private');
-const shareSelection={days:routeDays,ids:['r-a','r-b'],fields:['title','ja','time']};
-const pubPreview=await shares('preview',shareSelection);assert.equal(pubPreview.snapshot.length,2);assert.ok(!JSON.stringify(pubPreview.snapshot).includes('PRIVATE'));assert.deepEqual(Object.keys(pubPreview.snapshot[0]).sort(),['day','ja','time','title']);
+assert.equal((await shares('preview',{days:['2027-01-10'],ids:['ticket-synthetic'],fields:['title','status']})).error,'selection_changed_or_private');
+const shareSelection={days:routeDays,ids:['r-a','r-b'],fields:['title','status','ja','time']};
+const pubPreview=await shares('preview',shareSelection);assert.equal(pubPreview.snapshot.length,2);assert.ok(!JSON.stringify(pubPreview.snapshot).includes('PRIVATE'));assert.deepEqual(Object.keys(pubPreview.snapshot[0]).sort(),['day','ja','status','time','title']);
 const shareSecret='d'.repeat(64),shareId=crypto.randomUUID();const createBody={...shareSelection,guard:pubPreview.guard,id:shareId,secret:shareSecret,title:'公开行程',hours:24,confirmed:true};
 assert.equal((await shares('create',{...createBody,confirmed:false})).error,'share_preview_stale');assert.equal((await shares('create',{...createBody,secret:token})).error,'invalid_share_token');
 const createdShare=await shares('create',createBody);assert.ok(createdShare.id,JSON.stringify(createdShare));assert.equal((await shares('create',createBody)).id,createdShare.id);assert.equal((await db.query(`select count(*)::int n from private.share_revisions`)).rows[0].n,1);
