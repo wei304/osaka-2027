@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const version=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8')).version;
-const expected='V'+version+' ·';
+const expected='V'+version.replace(/\.0$/,'')+' ·';
 const site='https://wei304.github.io/osaka-2027/';
 let html='';for(let i=0;i<9;i++){const r=await fetch(site+'?release='+process.env.GITHUB_SHA,{signal:AbortSignal.timeout(15000)});html=await r.text();if(r.ok&&html.includes(expected))break;await new Promise(resolve=>setTimeout(resolve,10000));}
 assert.ok(html.includes(expected),'Pages has not published '+version);
