@@ -99,6 +99,20 @@ await db.exec(`update private.ai_usage set created_at=now()-interval '20 seconds
 const {scope:briefScope,reservation:briefReservation}=await startRequest('brief','brief1');assert.ok(briefReservation.requestId);assert.equal((await startRequest('ask')).reservation.error,'ai_busy');await ai('finish',{requestId:briefReservation.requestId,result:{answer:'cached brief',warnings:[]},usage:{total_tokens:100}});
 const cachedBrief=await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'brief',prompt:'brief1',inputBytes:500,cache:true});assert.equal(cachedBrief.cached.answer,'cached brief');
 await db.exec(`update private.ai_policy set daily_requests=1`);assert.equal((await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'ask',prompt:'limit',inputBytes:500})).error,'ai_rate_limit');await db.exec(`update private.ai_usage set created_at=now()-interval '20 seconds'`);assert.equal((await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'ask',prompt:'limit',inputBytes:500})).error,'ai_daily_limit');
+
+// The conservative token and money limits are independent of the request limit.
+await db.exec(`update private.ai_policy set daily_requests=100,daily_tokens=16000;update private.ai_usage set charged_tokens=16000`);
+assert.equal((await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'ask',prompt:'tokens',inputBytes:500})).error,'ai_daily_limit');
+await db.exec(`update private.ai_usage set charged_tokens=1,charged_usd=0;update private.ai_policy set daily_budget_usd=0.000001`);
+assert.equal((await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'ask',prompt:'money',inputBytes:500})).error,'ai_daily_limit');
+await db.exec(`update private.ai_policy set daily_budget_usd=1`);
+// Cache entries from budget-authorized requests must not leak into non-budget briefs.
+await db.exec(`update private.ai_usage set cacheable=false where task='brief'`);
+assert.equal((await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'brief',prompt:'brief1',inputBytes:500,cache:true})).cached,undefined);
+await db.exec(`update private.ai_usage set created_at=now()-interval '100 seconds' where status='pending'`);
+const afterTimeout=await ai('reserve',{days:aiDays,scopeHash:briefScope.scopeHash,task:'ask',prompt:'timeout',inputBytes:500});assert.ok(afterTimeout.requestId);
+assert.equal((await db.query(`select count(*)::int n from private.ai_usage where status='failed' and snapshot='[]'::jsonb`)).rows[0].n,1);
+
 await db.exec(`update private.ai_policy set enabled=false`);assert.equal((await ai('status')).enabled,false);assert.equal((await db.query(`select count(*)::int n from private.trip_files`)).rows[0].n,1,'AI migration changed existing file records');
 console.log('PASS V1.3 isolated PostgreSQL: default closed, auth/grants, no unconfirmed/cancelled writes, whole-scope conflict, idempotent confirmation, private file preservation, cached brief, concurrency/rate/request budget and kill switch.');
 await db.close();
