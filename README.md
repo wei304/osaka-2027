@@ -101,3 +101,7 @@ GitHub Pages：Settings → Pages → Deploy from a branch → main → /(root)�
 AI助手新增浏览器语音转文字（普通话/日语/英语）：开始、结束、预览、采用、取消。采用只追加文字并取消发送同意勾选，仍需手动发送AI。切页、隐藏页面、锁定时终止识别并清空预览；录音不存储、不上传到本项目后台。浏览器可能使用自己的在线服务，不保证手机Edge/Chrome/Safari实机可用，不支持时提示键盘麦克风。未引入付费转写服务。
 
 识别兼容性与数据处理依据：[MDN SpeechRecognition](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition)。
+
+## V1.5 旅行工具升级
+
+[AI答复朗读、离线紧急卡、出发前检查总览](V1.5-旅行工具升级.md)。三项均无需新增付费服务，沿用原同步、离线与版本记录。

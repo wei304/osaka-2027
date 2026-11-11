@@ -6,10 +6,10 @@ export function createSpeechPlayer({synth=globalThis.speechSynthesis,Utterance=g
  let current=null,timer=null,generation=0;
  function clearWatch(){if(timer!==null)clearTimer(timer);timer=null;}
  function cancel(){const active=!!current;generation++;clearWatch();if(current){current.onstart=current.onend=current.onerror=null;}current=null;try{if(synth&&(active||synth.speaking||synth.pending))synth.cancel();}catch{}}
- function play(text,voice,id){cancel();if(!synth||!Utterance){notify({id,state:'error',message:'此浏览器不支持设备朗读，请复制日文或展示给工作人员。'});return;}
+ function play(text,voice,id,{rate=1}={}){cancel();if(!synth||!Utterance){notify({id,state:'error',message:'此浏览器不支持设备朗读，请复制日文或展示给工作人员。'});return;}
   const g=generation;let started=false;
   const finish=(state,message)=>{if(g!==generation)return;clearWatch();current=null;notify({id,state,message});};
-  try{const u=new Utterance(text);current=u;u.lang='ja-JP';if(voice)u.voice=voice;u.rate=1;u.pitch=1;u.volume=1;
+  try{const u=new Utterance(text);current=u;u.lang='ja-JP';if(voice)u.voice=voice;u.rate=Number.isFinite(rate)?Math.min(1.2,Math.max(.7,rate)):1;u.pitch=1;u.volume=1;
    u.onstart=()=>{if(g!==generation)return;started=true;clearWatch();notify({id,state:'speaking',message:'已开始朗读日语。若听不到，请调高媒体音量并检查蓝牙耳机。'});};
    u.onend=()=>finish('done','朗读已结束。');
    u.onerror=e=>{const reason=e?.error;finish('error',reason==='not-allowed'?'浏览器未允许播放，请再次手动点击朗读，并检查网站声音设置。':['language-unavailable','voice-unavailable'].includes(reason)?'这份日语声音不可用，请切换另一种声音，或下载系统日语语音包。':reason==='network'?'此声音需要网络。请联网重试，或选择已下载的本机日语声音。':'日语朗读失败（'+(reason||'语音服务未响应')+'）。请重新检测或切换日语声音。');};
