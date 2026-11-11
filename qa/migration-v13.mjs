@@ -77,7 +77,7 @@ console.log('PASS V1.2 isolated PostgreSQL: atomic all-or-none batch, idempotenc
 await db.exec(fs.readFileSync(new URL('../supabase/v1_3_ai.sql',import.meta.url),'utf8'));
 const ai=async(action,body={})=>(await db.query(`select private.ai_trip_request($1,$2::jsonb) r`,[action,JSON.stringify({token,...body})])).rows[0].r;
 const countRevisions=async()=>(await db.query(`select count(*)::int n from public.trip_revisions`)).rows[0].n;
-const baseRevisions=await countRevisions();
+let baseRevisions=await countRevisions();
 assert.equal((await ai('status')).enabled,false);
 assert.equal((await ai('reserve',{days:['2027-01-10']})).error,'ai_disabled');
 assert.equal((await db.query(`select private.ai_trip_request('status','{}') r`)).rows[0].r.error,'locked');
@@ -87,6 +87,10 @@ const aiDays=['2027-01-10'];
 const getScope=async()=>await ai('snapshot',{days:aiDays});
 const startRequest=async(task='edit',prompt='synthetic')=>{const scope=await getScope();return {scope,reservation:await ai('reserve',{days:aiDays,scopeHash:scope.scopeHash,task,prompt,inputBytes:500,cache:task==='brief'})};};
 const finishDraft=async()=>{const {scope,reservation}=await startRequest();assert.ok(reservation.requestId,JSON.stringify(reservation));const before=scope.rows.find(r=>r.id==='synthetic-legacy');const entries=[{item:{...before.payload,title:'AI proposed title'},expected:before.version}];const finished=await ai('finish',{requestId:reservation.requestId,result:{answer:'synthetic',warnings:[],diff:[]},draft:{entries,diff:[],risks:[]},usage:{total_tokens:100}});assert.ok(finished.draftId,JSON.stringify(finished));return finished;};
+
+const privateExpense={...original,id:'ledger-privacy',notes:'【五人账本 v1】'+String.fromCharCode(10)+JSON.stringify({type:'expense',currency:'JPY',amount:777,payer:'PRIVATE_NAME',participants:['PRIVATE_NAME']})};await apply(privateExpense,0);
+const budgetPreview=await ai('snapshot',{days:aiDays,shareBudget:true});assert.equal(budgetPreview.budget.JPY,777);assert.ok(!JSON.stringify(budgetPreview.budget).includes('PRIVATE_NAME'));assert.equal((await ai('snapshot',{days:aiDays})).budget,null);
+baseRevisions=await countRevisions();
 const firstDraft=await finishDraft();assert.equal(await countRevisions(),baseRevisions,'generation wrote itinerary');
 assert.equal((await ai('cancel',{draftId:firstDraft.draftId})).ok,true);
 assert.equal((await ai('confirm',{draftId:firstDraft.draftId})).error,'draft_expired_or_cancelled');assert.equal(await countRevisions(),baseRevisions,'cancel wrote itinerary');
