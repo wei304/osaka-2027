@@ -6,7 +6,7 @@ const id='11111111-1111-4111-8111-111111111111',source='https://example.org/veri
 const place=(over={})=>({id,version:1,source_name:'名称不能证明地区',original_url:'https://www.google.com/maps/place/example/!1s0x1:0x2',geo_evidence:{},manual_fields:{},region:'待确认地区',archived:false,...over});
 test('Chinese/Japanese aliases retain current buckets, hierarchy and custom names',()=>{
  for(const [a,b]of [['難波','难波 / 心斋桥'],['心斎橋','难波 / 心斋桥'],['道頓堀','道顿堀 / 日本桥'],['大阪駅','梅田 / 大阪站'],['阿倍野区','天王寺 / 阿倍野'],['USJ','环球影城周边'],['京都府','京都'],['奈良県','奈良']])assert.equal(normalizeRegion(a).region,b);
- assert.equal(normalizeRegion('日本橋').ambiguous,true);assert.equal(normalizeRegion('日本橋',{city:'大阪市'}).region,'道顿堀 / 日本桥');assert.equal(normalizeRegion('我的自定地区').custom,true);assert.equal(normalizeRegion('待确认地区'),null);assert.ok(normalizeRegion('心斎橋').path.includes('大阪市'));
+ assert.equal(normalizeRegion('日本橋').ambiguous,true);assert.equal(normalizeRegion('日本橋',{address:'大阪市／東京都中央区'}).ambiguous,true);assert.equal(normalizeRegion('日本橋',{city:'大阪市'}).region,'道顿堀 / 日本桥');assert.equal(normalizeRegion('我的自定地区').custom,true);assert.equal(normalizeRegion('待确认地区'),null);assert.ok(normalizeRegion('心斎橋').path.includes('大阪市'));
 });
 test('verified address parsing requires explicit city and never equates a whole ward to a neighbourhood',()=>{
  for(const [a,b]of [['大阪府大阪市中央区難波1-2-3','难波 / 心斋桥'],['大阪市中央区心斋桥筋1丁目','难波 / 心斋桥'],['大阪市中央区道頓堀1丁目','道顿堀 / 日本桥'],['大阪市浪速区日本橋3丁目','道顿堀 / 日本桥'],['大阪市北区梅田1丁目','梅田 / 大阪站'],['大阪市阿倍野区阿倍野筋1丁目','天王寺 / 阿倍野'],['大阪市港区海岸通1-1-10','大阪湾 / 天保山'],['大阪市此花区桜島2丁目1番33号','环球影城周边'],['京都市中京区日本橋','京都'],['奈良市登大路町','奈良']])assert.equal(regionFromAddress(a).region?.region,b,a);

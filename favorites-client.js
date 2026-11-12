@@ -1,6 +1,6 @@
 import {queueFavoriteEdit,visibleFavorites,queueFavoriteDays,visibleFavoriteLinks} from './favorites-core.js';
 const DB='osaka-private-favorites-v1';
-const empty=()=>({places:[],sources:[],sourceItems:[],links:[],batches:[],queue:[],pendingImport:null,pendingAI:null,aiReview:null});
+const empty=()=>({places:[],sources:[],sourceItems:[],links:[],batches:[],queue:[],pendingImport:null,pendingAI:null,aiReview:null,regionReview:null,pendingRegion:null});
 export const FAVORITE_ERRORS={invalid_days:'请选择1月9日至17日内不重复的旅行日期。',favorite_archived:'请先取消归档，再关联日期。',preview_stale:'收藏已变化或预览过期，请重新预览后确认。',favorite_conflict:'旅伴已更新此地点，请比较本机与云端版本。',invalid_import:'导入内容未通过服务端校验。',import_rejected:'整批导入已回滚，未留下部分地点。可重新预览后重试。',operation_reused:'操作编号对应的内容不同，请重新预览。',batch_not_available:'此批次已撤销或不可撤销。',favorite_not_found:'收藏不存在，请刷新。',invalid_favorite:'请检查地区、类型与备注。'};
 function storage(mode,callback){return new Promise((resolve,reject)=>{const open=indexedDB.open(DB,1);open.onupgradeneeded=()=>open.result.createObjectStore('state');open.onerror=()=>reject(Error('收藏离线存储不可用，请导出备份。'));open.onsuccess=()=>{const db=open.result,tx=db.transaction('state',mode),store=tx.objectStore('state');let result;tx.oncomplete=()=>{db.close();resolve(result);};tx.onerror=()=>{db.close();reject(Error('收藏缓存保存失败，请导出备份。'));};tx.onabort=()=>{db.close();reject(Error('另一页面已修改收藏，请刷新后继续。'));};callback(store,value=>{result=value;},()=>tx.abort());};});}
 export class FavoritesClient{
