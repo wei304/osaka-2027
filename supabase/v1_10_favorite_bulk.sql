@@ -7,6 +7,7 @@ create table if not exists private.favorite_bulk_tasks(
  policy_version int,executor uuid,executor_session bytea,lease_until timestamptz,pending uuid,
  done jsonb not null default '[]',reviewed jsonb not null default '[]',skipped jsonb not null default '[]',error text
 );
+create index if not exists favorite_bulk_tasks_created on private.favorite_bulk_tasks(created_at desc);
 create table if not exists private.favorite_bulk_batches(operation uuid primary key references private.favorite_ai_jobs(operation),task_id uuid not null references private.favorite_bulk_tasks(id));
 create index if not exists favorite_bulk_batches_task on private.favorite_bulk_batches(task_id);
 create table if not exists private.favorite_bulk_reviews(operation uuid primary key,task_id uuid not null references private.favorite_bulk_tasks(id),request_hash text not null,response jsonb not null,created_at timestamptz not null default now());
@@ -36,6 +37,7 @@ declare t private.favorite_bulk_tasks;p private.favorite_places;i jsonb;r jsonb;
  tok text;th bytea;op uuid;tid uuid;ex uuid;h text;mode text;count_all int:=0;models int:=0;caches int:=0;rules int:=0;max_cost numeric;spent numeric;reqs int;reg text;d date;allowed boolean;
 begin
  if p_action not like 'bulk_%' then
+  if p_action='plan' then r:=private.favorite_ai_request_single(p_action,p_body);if r ? 'status' then return r;end if;return jsonb_set(r,'{jobs}',coalesce((select jsonb_agg(x) from jsonb_array_elements(r->'jobs')x where not exists(select 1 from private.favorite_bulk_batches b where b.operation=(x->>'operation')::uuid)),'[]'));end if;
   if p_action in ('confirm','discard') and exists(select 1 from private.favorite_bulk_batches where operation=(p_body->>'operation')::uuid) then return jsonb_build_object('status',409,'error','bulk_review_required');end if;
   return private.favorite_ai_request_single(p_action,p_body);
  end if;
