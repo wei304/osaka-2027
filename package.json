@@ -5,7 +5,7 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "start": "python -m http.server 8080",
-    "test:db": "node qa/migration-v111-all.mjs",
+    "test:db": "node qa/migration-v112-all.mjs",
     "test:browser": "node qa/browser-v14.mjs"
   },
   "version": "1.10.1",
