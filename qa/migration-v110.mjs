@@ -42,8 +42,8 @@ export async function testBulkSQL(){
  assert.equal((await call('resume',{...concurrent,confirmed:true,automatic:true})).error,'bulk_failure_needs_review');
  assert.equal((await call('resume',{...concurrent,confirmed:true,automatic:true,acknowledgeFailure:true})).status,200);
  await f.db.exec("update private.ai_usage set created_at=now()-interval '11 seconds'");
- let release,entered;const entryBarrier=new Promise(r=>entered=r);hold=new Promise(r=>release=r);
- const originalComplete=h; // The fake provider is held after its ONE reservation.
+ let release;hold=new Promise(r=>release=r);
+ // The fake provider is held after its ONE reservation.
  const originalCallCount=calls,operation2=crypto.randomUUID();
  const inFlight=call('step',{...concurrent,operation:operation2,consent:true});
  for(let n=0;n<100&&calls===originalCallCount;n++)await new Promise(r=>setTimeout(r,2));assert.equal(calls,originalCallCount+1);
@@ -70,6 +70,15 @@ export async function testBulkSQL(){
  assert.equal((await call('confirm',{...manualTask,operation:crypto.randomUUID(),confirmed:true,entries:[{id:manualId,type:'购物',days:[]}]})).status,200);
  const mr=await f.call('rows',{token}),protectedPlace=mr.places.find(p=>p.id===manualId);assert.equal(protectedPlace.region,'人工自定义');assert.equal(protectedPlace.place_type,'交通');assert.equal(protectedPlace.user_note,'PRIVATE MANUAL NOTE');assert.ok(mr.links.some(l=>l.place_id===manualId&&l.day==='2027-01-11'&&l.active));
  const expired=await call('preview',{taskId:crypto.randomUUID(),mode:'pending'});await f.db.query("update private.favorite_bulk_tasks set expires_at=now()-interval '1 second' where id=$1",[expired.id]);assert.equal((await call('authorize',{taskId:expired.id,executor,guard:expired.guard,capCny:1,capRequests:10,confirmed:true,automatic:true})).error,'bulk_expired');
+
+ // Stale context, changed shared budget and payload reuse cannot cause another charge.
+ const contextTask=await start([ids[1]],1,5);await f.db.query("update private.favorite_places set source_name=source_name||' changed',version=version+1 where id=$1",[ids[1]]);assert.equal((await call('step',{...contextTask,operation:crypto.randomUUID(),consent:true})).error,'draft_stale');await call('stop',contextTask);
+ const policyTask=await start([ids[2]],1,5);await f.db.exec('update private.ai_policy set budget_version=budget_version+1');assert.equal((await call('step',{...policyTask,operation:crypto.randomUUID(),consent:true})).error,'budget_changed');await call('stop',policyTask);
+ const replayTask=await start([ids[3]],1,5);assert.equal((await call('step',{...replayTask,operation:state.batches[0].operation,consent:true})).error,'operation_reused');await call('stop',replayTask);
+ // New imports cannot extend an already authorized scope, even on resume.
+ const frozen=await start([ids[4]],1,5),newRows=[{name:'Synthetic later import',url:'https://www.google.com/maps/!1s0xee:0x1',key:'google:fid:0xee:0x1',note:'',labels:'购物',comment:''}],newInput={token,rows:newRows,source:'Synthetic later',fileHash:'f'.repeat(64)},newPre=await f.call('preview',newInput);await f.call('import',{...newInput,...newPre,operation:crypto.randomUUID(),confirmed:true});assert.equal((await call('status',frozen)).items.length,1);await call('stop',frozen);
+ // The real public invoker entrypoint reaches the wrapped task API; client grants remain denied.
+ const pub=await f.db.query('select public.favorite_ai_request($1,$2::jsonb) r',['bulk_list',JSON.stringify({token})]);assert.ok(Array.isArray(pub.rows[0].r.tasks));
  console.log('PASS bulk task cap/global rate, in-flight dual-device exclusion, pause, cross-session recovery, failure accounting/skip, atomic audit rollback, manual protection and expiry.');
  const grants=await f.db.query("select has_function_privilege('anon','private.favorite_ai_request(text,jsonb)','execute') a,has_table_privilege('authenticated','private.favorite_bulk_tasks','select') t");assert.equal(grants.rows[0].a,false);assert.equal(grants.rows[0].t,false);
  console.log('PASS bounded favorite SQL + real Edge: synthetic 94 / 19 batches / 15 model calls, zero unreviewed writes, cache reuse, lease isolation, pause/resume, idempotent review and private grants.');

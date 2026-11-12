@@ -2,7 +2,7 @@ import {FAVORITE_AI_SYSTEM,favoriteAIInput,validateFavoriteAI,localFavoriteSugge
 // Called only after the main handler's body cap, CORS and session header checks.
 export async function handleFavoriteAI({body:b,token,rpc,complete,enabled,modelName}){
  const call=(action,body={})=>rpc('favorites_'+action,{...body,token});
- const bulk=b.action==='favorites_bulk_step',scope={taskId:b.taskId,executor:b.executor};
+ const bulk=b.action==='favorites_bulk_step',scope={taskId:b.taskId,executor:b.executor,operation:b.operation};
  if(b.action.startsWith('favorites_bulk_')&&!bulk){const r=await call(b.action.slice(10),b);return {...r,serverReady:enabled};}
  if(bulk){const recovered=await call('bulk_status',scope);if(recovered.status)return recovered;if(recovered.pending)return {...recovered,recoverFirst:true};}
  if(b.action==='favorites_plan'){const r=await call('plan');return {...r,serverReady:enabled};}

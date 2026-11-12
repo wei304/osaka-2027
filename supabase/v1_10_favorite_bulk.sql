@@ -44,7 +44,7 @@ begin
  -- This call takes the same shared gate lock used by edits, imports and the original AI chain.
  check_r:=private.favorite_request('rows',jsonb_build_object('token',tok));if check_r ? 'status' then return check_r;end if;
  if p_action='bulk_list' then
-  return jsonb_build_object('tasks',coalesce((select jsonb_agg(jsonb_build_object('id',id,'state',case when expires_at<now() then 'expired' else state end,'createdAt',created_at,'total',jsonb_array_length(items))) from (select * from private.favorite_bulk_tasks order by created_at desc limit 20)x),'[]'));
+  return jsonb_build_object('tasks',coalesce((select jsonb_agg(jsonb_build_object('id',x.id,'state',case when x.expires_at<now() then 'expired' else x.state end,'createdAt',x.created_at,'total',jsonb_array_length(x.items))) from (select * from private.favorite_bulk_tasks order by created_at desc limit 20)x),'[]'));
  end if;
  tid:=(p_body->>'taskId')::uuid;if tid is null then return jsonb_build_object('status',400,'error','invalid_request');end if;
  select * into t from private.favorite_bulk_tasks where id=tid for update;
@@ -79,9 +79,10 @@ begin
    end if;
   end if;
   if jsonb_array_length(t.done)=jsonb_array_length(t.items) and t.state='running' then update private.favorite_bulk_tasks set state='review',executor=null,lease_until=null where id=tid returning * into t;end if;
+  if t.state='running' and t.lease_until<now() and t.pending is null then update private.favorite_bulk_tasks set state='paused',executor=null,lease_until=null where id=tid returning * into t;end if;
   s:=private.ai_trip_request('status',jsonb_build_object('token',tok));select 16000*max_price_per_million_cny/1000000 into max_cost from private.ai_policy where id=true;
   select count(*) filter(where x->'needsAI'='true'::jsonb),count(*) filter(where x->'cached'<>'null'::jsonb),count(*) filter(where x->'needsAI'='false'::jsonb and x->'cached'='null'::jsonb) into models,caches,rules from jsonb_array_elements(t.items)x;
-  return private.favorite_bulk_view(t)||jsonb_build_object('policy',s,'maxBatchReservationCny',max_cost,'modelPlaces',models,'cachedPlaces',caches,'rulePlaces',rules,'estimatedBatches',ceil(jsonb_array_length(t.items)/5.0),'remainingCny',greatest(0,(s->>'dailyBudgetCny')::numeric-(s->>'usedCny')::numeric));
+  return private.favorite_bulk_view(t)||jsonb_build_object('policy',s,'maxBatchReservationCny',max_cost,'modelPlaces',models,'cachedPlaces',caches,'rulePlaces',rules,'estimatedBatches',ceil(jsonb_array_length(t.items)/5.0),'remainingRequests',greatest(0,(s->>'dailyRequests')::int-(s->>'todayRequests')::int),'remainingTokens',(select greatest(0,(s->>'dailyTokens')::int-coalesce(sum(charged_tokens),0)) from private.ai_usage where (created_at at time zone 'Asia/Tokyo')::date=(now() at time zone 'Asia/Tokyo')::date),'remainingCny',greatest(0,(s->>'dailyBudgetCny')::numeric-(s->>'usedCny')::numeric));
  end if;
  if p_action='bulk_stop' then update private.favorite_bulk_tasks set state='stopped',executor=null,lease_until=null where id=tid returning * into t;return private.favorite_bulk_view(t);end if;
  if t.expires_at<now() and p_action not in ('bulk_finish','bulk_fail','bulk_confirm') then return jsonb_build_object('status',409,'error','bulk_expired');end if;
@@ -103,6 +104,9 @@ begin
   update private.favorite_bulk_tasks set state='paused',executor=null,lease_until=null where id=tid returning * into t;return private.favorite_bulk_view(t);
  end if;
  if p_action in ('bulk_next','bulk_prepare') then
+  op:=(p_body->>'operation')::uuid;
+  if op is null then return jsonb_build_object('status',400,'error','invalid_request');end if;
+  if exists(select 1 from private.favorite_ai_jobs where operation=op) and not exists(select 1 from private.favorite_bulk_batches where operation=op and task_id=tid) then return jsonb_build_object('status',409,'error','operation_reused');end if;
   if t.state<>'running' or t.executor is distinct from ex or t.executor_session is distinct from th or t.lease_until<now() then return jsonb_build_object('status',409,'error','bulk_executor_busy');end if;
   if t.pending is not null then return jsonb_build_object('status',409,'error','bulk_recover_first');end if;
   for i in select value from jsonb_array_elements(t.items) order by (value->>'needsAI')::boolean,value->>'id' loop
@@ -118,6 +122,7 @@ begin
   if p_action='bulk_next' then return jsonb_build_object('items',batch,'guard',private.favorite_ai_guard(batch));end if;
   if p_body->>'guard' is distinct from private.favorite_ai_guard(batch) then return jsonb_build_object('status',409,'error','draft_stale');end if;
   s:=private.ai_trip_request('status',jsonb_build_object('token',tok));
+  if s->>'currency' is distinct from 'CNY' then return jsonb_build_object('status',409,'error','bulk_currency_unsupported');end if;
   if t.policy_version is distinct from (s->>'budgetVersion')::int then return jsonb_build_object('status',409,'error','budget_changed');end if;
   select 16000*max_price_per_million_cny/1000000 into max_cost from private.ai_policy where id=true;
   select coalesce(sum(u.charged_cny),0),count(u.id) into spent,reqs from private.favorite_bulk_batches b join private.favorite_ai_jobs job on job.operation=b.operation left join private.ai_usage u on u.id=job.request_id where b.task_id=tid;
