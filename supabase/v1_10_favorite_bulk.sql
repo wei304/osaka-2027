@@ -170,6 +170,10 @@ begin
  return jsonb_build_object('status',400,'error','invalid_action');
 exception when invalid_text_representation or numeric_value_out_of_range or not_null_violation or check_violation or unique_violation then return jsonb_build_object('status',400,'error','invalid_request');
 end$$;
+-- Rebind the public invoker after renaming its delegate, including cached SQL plans.
+create or replace function public.favorite_ai_request(p_action text,p_body jsonb) returns jsonb language sql security invoker set search_path='' as $$select private.favorite_ai_request(p_action,p_body);$$;
+revoke all on function public.favorite_ai_request(text,jsonb) from public,anon,authenticated;
+grant execute on function public.favorite_ai_request(text,jsonb) to service_role;
 revoke all on function private.favorite_ai_plan(),private.favorite_ai_plan_single(),private.favorite_bulk_view(private.favorite_bulk_tasks),private.favorite_ai_request_single(text,jsonb),private.favorite_ai_request(text,jsonb) from public,anon,authenticated;
 grant execute on function private.favorite_ai_request(text,jsonb) to service_role;
 commit;
