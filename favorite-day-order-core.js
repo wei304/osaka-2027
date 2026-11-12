@@ -18,7 +18,7 @@ export function regionMatch(place,profile){const p=verifiedRegion(place);if(!p||
 export function rankDayFavorite(place,profile,prefs={}){const match=regionMatch(place,profile),pinned=(prefs.pinned||[]).includes(place.id),known=!!verifiedRegion(place);
  const base=match.kind==='exact'?400:match.kind==='group'?350:pinned?300:known?200:100;
  const reason=match.kind==='exact'?'与当天核实地区一致':match.kind==='group'?'与当天已核实地区分组匹配（不代表相邻）':pinned?`本机当天优先${known?'':'；地区仍待核实'}`:known?'其他当天已关联收藏':'地区待核实，不作地区匹配';
- return {id:place.id,score:base+(pinned&&base>300?5:0),reason,region:match.region,known,pinned};
+ return {id:place.id,score:base+(pinned&&base>300?5:0),reason:reason+(pinned&&base>300?'；本机当天优先':''),region:match.region,known,pinned};
 }
 export function sortDayFavorites(places,profile,prefs={}){const mode=Object.hasOwn(DAY_SORT_MODES,prefs.sort)?prefs.sort:'smart',order=new Map((prefs.order||[]).map((id,n)=>[id,n])),byId=new Map(places.map(p=>[p.id,p])),manual=id=>order.get(id)??Number.MAX_SAFE_INTEGER;
  return places.map(p=>rankDayFavorite(p,profile,prefs)).sort((a,b)=>{
