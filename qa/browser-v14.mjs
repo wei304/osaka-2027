@@ -84,7 +84,14 @@ handleShare=async(req,res)=>{const chunks=[];for await(const c of req)chunks.pus
 
 await context.addInitScript(()=>{if(!localStorage.getItem('osaka-2027-v1-shared-session'))localStorage.setItem('osaka-2027-v1-shared-session',JSON.stringify({token:'a'.repeat(64),expiresAt:Date.now()+3600000}));});
 await page.addInitScript(()=>{window.qaToasts=[];addEventListener('DOMContentLoaded',()=>{new MutationObserver(()=>window.qaToasts.push(document.querySelector('#toast').textContent)).observe(document.querySelector('#toast'),{childList:true,subtree:true});});});await page.goto(url);try{await page.waitForFunction(()=>!document.querySelector('#app-main').hidden);await page.waitForFunction(()=>document.querySelector('#items').textContent.includes('出发日测试'));}catch(e){console.log(JSON.stringify({engine,errors,requests,text:(await page.locator('body').innerText()).slice(0,1400)}));throw e;}
-if(process.env.QA_CAPTURE_BEFORE==='1'||process.env.QA_CAPTURE_AFTER==='1'){
+if(process.env.QA_CHAT_ONLY==='1'){
+ await openTab(page,'ai'); await page.locator('#chat-settings-open').click(); await page.locator('#ai-budget-settings > summary').click(); await page.locator('#ai-policy-on').check(); await page.locator('#ai-budget-save').click(); await page.waitForFunction(()=>!document.querySelector('#ai-generate').disabled); await page.locator('#chat-settings-close').click();
+ for(let n=0;n<2;n++){await page.locator('#ai-prompt').fill('测试问题'+n);await page.locator('#ai-consent').check();await page.locator('#ai-generate').click();await page.waitForFunction(()=>!document.querySelector('#ai-generate').disabled);}
+ assert.equal(await page.locator('.chat-message').count(),4); assert.equal(modelCalls,2); await page.locator('#chat-quick button').first().click();assert.equal(modelCalls,2);
+ await page.evaluate(async()=>{const {renderMarkdown}=await import('/chat-markdown.js');renderMarkdown(document.querySelector('.chat-markdown'),'# 标题\n\n|甲|乙|\n|---|---|\n|很长的文字|内容|\n<script>window.xss=1</script> [坏链接](javascript:alert(1))');});assert.equal(await page.evaluate(()=>window.xss),undefined);assert.equal(await page.locator('.chat-markdown script').count(),0);
+ for(const width of [320,390,768]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.join(root,`qa-results/chat-5a-${width}-${engine}.png`)});}
+ assert.deepEqual(errors,[]);console.log('PASS chat 5a mobile shell, two requests, retained bubbles, shortcuts, Markdown safety, 320/390/768');
+}else if(process.env.QA_CAPTURE_BEFORE==='1'||process.env.QA_CAPTURE_AFTER==='1'){
  const capture=process.env.QA_CAPTURE_BEFORE==='1'?'before':'after';
  for(const width of [320,390,768]){await page.setViewportSize({width,height:844});await page.screenshot({path:path.join(root,`qa-results/${capture}-home-${width}-${engine}.png`)});}
  for(const width of [320,390,768]){await page.setViewportSize({width,height:844});await openTab(page,'ai');await page.screenshot({path:path.join(root,`qa-results/${capture}-ai-${width}-${engine}.png`)});}
