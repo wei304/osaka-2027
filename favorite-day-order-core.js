@@ -4,10 +4,11 @@ import {normalizeRegion} from './favorite-region-core.js';
 export const DAY_SORT_MODES=Object.freeze({smart:'智能',region:'地区',type:'类型',name:'名称',manual:'手动'});
 const text=s=>String(s??'').normalize('NFKC').toLowerCase();
 const cmp=(a,b)=>text(a)<text(b)?-1:text(a)>text(b)?1:0;
+const compareId=(a,b)=>String(a)<String(b)?-1:String(a)>String(b)?1:0;
 const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 const stable=v=>JSON.stringify(canonical(v));
-export function localDayScope(items,day){return items.filter(i=>i.day===day&&!i.deleted&&!/^(tool-|ticket-|ledger-|plan-choice-)/.test(i.id)).map(i=>({id:i.id,version:i.version??0,title:(i.title??'').slice(0,160),time:i.time??null,category:i.category??null})).sort((a,b)=>cmp(a.id,b.id));}
-export function currentDayProfile(profile,items,day){if(!profile||profile.day!==day||profile.valid!==true||!Array.isArray(profile.scope)||!Array.isArray(profile.regions))return null;return stable([...profile.scope].sort((a,b)=>cmp(a.id,b.id)))===stable(localDayScope(items,day))?profile:null;}
+export function localDayScope(items,day){return items.filter(i=>i.day===day&&!i.deleted&&!/^(tool-|ticket-|ledger-|plan-choice-)/.test(i.id)).map(i=>({id:i.id,version:i.version??0,title:(i.title??'').slice(0,160),time:i.time??null,category:i.category??null})).sort((a,b)=>compareId(a.id,b.id));}
+export function currentDayProfile(profile,items,day){if(!profile||profile.day!==day||profile.valid!==true||!Array.isArray(profile.scope)||!Array.isArray(profile.regions))return null;return stable([...profile.scope].sort((a,b)=>compareId(a.id,b.id)))===stable(localDayScope(items,day))?profile:null;}
 export function regionMatch(place,profile){const p=verifiedRegion(place);if(!p||!profile)return {kind:'none',region:p?.region||''};let grouped=false;
  for(const raw of profile.regions){if(typeof raw!=='string')continue;const r=normalizeRegion(raw);if(!r||r.ambiguous||/^(大阪|大阪府|大阪市|日本|关西|関西|其他地区|其他|待确认地区)$/.test(r.region))continue;
   if(p.raw===raw.trim()||p.key===r.key&&(!p.region.includes(' / ')||p.raw!==p.region&&raw.trim()!==r.region))return {kind:'exact',region:p.region};
@@ -31,7 +32,7 @@ export function sortDayFavorites(places,profile,prefs={}){const mode=Object.hasO
  });}
 export function createDayFavoriteSelector(){const cache=new Map();let computations=0;return {get computations(){return computations;},clear(){cache.clear();},select({places,links,day,profile,items,prefs={}}){
  const ids=new Set(links.filter(l=>l.active&&l.day===day).map(l=>l.place_id)),linked=places.filter(p=>!p.archived&&ids.has(p.id)),current=currentDayProfile(profile,items,day);
- const key=stable({places:linked.map(p=>({id:p.id,name:p.source_name,type:p.place_type,region:p.region,evidence:p.geo_evidence,manualRegion:p.manual_fields?.region})).sort((a,b)=>cmp(a.id,b.id)),profile:profile?{valid:profile.valid,regions:profile.regions,scope:profile.scope}:null,local:localDayScope(items,day),prefs});
+ const key=stable({places:linked.map(p=>({id:p.id,name:p.source_name,type:p.place_type,region:p.region,evidence:p.geo_evidence,manualRegion:p.manual_fields?.region})).sort((a,b)=>compareId(a.id,b.id)),profile:profile?{valid:profile.valid,regions:profile.regions,scope:profile.scope}:null,local:localDayScope(items,day),prefs});
  if(cache.get(day)?.key!==key){computations++;cache.set(day,{key,result:{rows:sortDayFavorites(linked,current,prefs),verified:!!current,total:linked.length}});}return cache.get(day).result;
  }};}
 export function moveInVisibleOrder(order,visible,id,delta){const next=[...order],at=visible.indexOf(id),other=visible[at+delta];if(at<0||!other)return next;const a=next.indexOf(id),b=next.indexOf(other);if(a<0||b<0)return next;[next[a],next[b]]=[next[b],next[a]];return next;}
