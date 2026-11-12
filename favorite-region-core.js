@@ -31,14 +31,14 @@ export function regionFromAddress(raw){
  if(cities.includes('京都'))return {region:normalizeRegion('京都'),conflict:''};
  if(cities.includes('奈良'))return {region:normalizeRegion('奈良'),conflict:''};
  if(!/大阪市/.test(a))return {region:null,conflict:'缺少明确城市结构，不能凭行政区或店名归类。'};
- if(/大阪市(?:中央区|浪速区)(?:難波|難波中|なんば)/.test(a))hits.push('namba');
- if(/大阪市中央区(?:心斎橋筋|東心斎橋|西心斎橋)/.test(a))hits.push('shinsaibashi');
- if(/大阪市中央区道頓堀/.test(a))hits.push('dotonbori');
- if(/大阪市(?:中央区|浪速区)(?:日本橋|日本橋東|日本橋西)/.test(a))hits.push('nipponbashi');
- if(/大阪市北区梅田/.test(a))hits.push('umeda');
+ if(/大阪市(?:中央区|浪速区)(?:難波|難波中|なんば)(?:[0-9一二三四五六七八九十]|$)/.test(a))hits.push('namba');
+ if(/大阪市中央区(?:心斎橋筋|東心斎橋|西心斎橋)(?:[0-9一二三四五六七八九十]|$)/.test(a))hits.push('shinsaibashi');
+ if(/大阪市中央区道頓堀(?:[0-9一二三四五六七八九十]|$)/.test(a))hits.push('dotonbori');
+ if(/大阪市(?:中央区|浪速区)(?:日本橋|日本橋東|日本橋西)(?:[0-9一二三四五六七八九十]|$)/.test(a))hits.push('nipponbashi');
+ if(/大阪市北区梅田(?:[0-9一二三四五六七八九十]|$)/.test(a))hits.push('umeda');
  if(/大阪市天王寺区/.test(a))hits.push('tennoji');
  if(/大阪市阿倍野区/.test(a))hits.push('abeno');
- if(/大阪市港区(?:築港|海岸通)/.test(a))hits.push('tempozan');
+ if(/大阪市港区(?:築港[34](?:丁目|[-番])|海岸通1(?:丁目|[-番]))/.test(a))hits.push('tempozan');
  if(/大阪市此花区桜島2(?:丁目|[-番])/.test(a))hits.push('usj');
  const keys=[...new Set(hits)];return keys.length===1?{region:REGION_NODES.find(n=>n.key===keys[0]),conflict:''}:{region:null,conflict:keys.length?'地址对应多个地区，请人工核实。':'只有宽泛行政区或未知街区；不足以判定具体收藏地区。'};
 }

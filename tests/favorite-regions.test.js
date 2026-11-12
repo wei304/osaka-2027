@@ -10,7 +10,7 @@ test('Chinese/Japanese aliases retain current buckets, hierarchy and custom name
 });
 test('verified address parsing requires explicit city and never equates a whole ward to a neighbourhood',()=>{
  for(const [a,b]of [['大阪府大阪市中央区難波1-2-3','难波 / 心斋桥'],['大阪市中央区心斋桥筋1丁目','难波 / 心斋桥'],['大阪市中央区道頓堀1丁目','道顿堀 / 日本桥'],['大阪市浪速区日本橋3丁目','道顿堀 / 日本桥'],['大阪市北区梅田1丁目','梅田 / 大阪站'],['大阪市阿倍野区阿倍野筋1丁目','天王寺 / 阿倍野'],['大阪市港区海岸通1-1-10','大阪湾 / 天保山'],['大阪市此花区桜島2丁目1番33号','环球影城周边'],['京都市中京区日本橋','京都'],['奈良市登大路町','奈良']])assert.equal(regionFromAddress(a).region?.region,b,a);
- for(const a of ['東京都中央区日本橋','東京都港区','大阪市北区天神橋','大阪市港区弁天','中央区日本橋','大阪府池田市','大阪市此花区島屋1丁目','大阪市北区梅田／東京都港区'])assert.equal(regionFromAddress(a).region,null,a);
+ for(const a of ['東京都中央区日本橋','東京都港区','大阪市北区天神橋','大阪市港区弁天','大阪市港区海岸通4丁目','大阪市北区梅田という店名','中央区日本橋','大阪府池田市','大阪市此花区島屋1丁目','大阪市北区梅田／東京都港区'])assert.equal(regionFromAddress(a).region,null,a);
 });
 test('Maps identities, names, query fields and viewport coordinates never become region evidence or Places IDs',()=>{
  for(const url of ['https://www.google.com/maps?q=梅田&place_id=anything','https://maps.app.goo.gl/example','https://www.google.com/maps/place/難波/@34.67,135.5,15z/!1s0x1:0x2']){assert.equal(inspectMapsIdentity(url).placesId,null);assert.equal(regionProposal(place({source_name:'梅田大阪店',original_url:url})).status,'unresolved');}
