@@ -11,3 +11,5 @@
 #region-review-panel input[type=checkbox]{width:20px;min-width:20px;height:20px;min-height:20px;flex:none}#region-review-panel .filter{display:flex;align-items:flex-start;gap:10px}
 
 #favorite-bulk-panel label{display:grid;gap:6px;min-width:0}#favorite-bulk-panel .filter{display:flex;align-items:flex-start}#favorite-bulk-panel input:not([type=checkbox]),#favorite-bulk-panel select{width:100%;min-width:0}#favorite-bulk-panel input[type=checkbox]{width:auto}#bulk-inputs pre{max-height:240px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}#bulk-place-picker{max-height:240px;overflow:auto}#bulk-review{display:grid;gap:14px}#bulk-review fieldset{min-width:0}
+
+#days-batch-panel label{display:grid;gap:6px;min-width:0}#days-batch-panel .filter{display:flex;align-items:flex-start}#days-batch-panel input:not([type=checkbox]),#days-batch-panel select{width:100%;min-width:0}#days-batch-panel input[type=checkbox]{width:auto}#days-batch-panel fieldset{min-width:0}#days-batch-places{max-height:340px;overflow:auto}#days-batch-preview-rows{display:grid;gap:12px}
