@@ -69,10 +69,12 @@ handleShare=async(req,res)=>{const chunks=[];for await(const c of req)chunks.pus
 
 await context.addInitScript(()=>{if(!localStorage.getItem('osaka-2027-v1-shared-session'))localStorage.setItem('osaka-2027-v1-shared-session',JSON.stringify({token:'a'.repeat(64),expiresAt:Date.now()+3600000}));});
 await page.addInitScript(()=>{window.qaToasts=[];addEventListener('DOMContentLoaded',()=>{new MutationObserver(()=>window.qaToasts.push(document.querySelector('#toast').textContent)).observe(document.querySelector('#toast'),{childList:true,subtree:true});});});await page.goto(url);try{await page.waitForFunction(()=>!document.querySelector('#app-main').hidden);await page.waitForFunction(()=>document.querySelector('#items').textContent.includes('出发日测试'));}catch(e){console.log(JSON.stringify({engine,errors,requests,text:(await page.locator('body').innerText()).slice(0,1400)}));throw e;}
-if(process.env.QA_CAPTURE_BEFORE==='1'){
- for(const width of [320,390,768]){await page.setViewportSize({width,height:844});await page.screenshot({path:path.join(root,`qa-results/before-home-${width}-${engine}.png`)});}
- await openTab(page,'ai');await page.screenshot({path:path.join(root,`qa-results/before-ai-${engine}.png`)});
- console.log('PASS baseline screenshots from immutable aae87d6bc with synthetic fixtures');
+if(process.env.QA_CAPTURE_BEFORE==='1'||process.env.QA_CAPTURE_AFTER==='1'){
+ const capture=process.env.QA_CAPTURE_BEFORE==='1'?'before':'after';
+ for(const width of [320,390,768]){await page.setViewportSize({width,height:844});await page.screenshot({path:path.join(root,`qa-results/${capture}-home-${width}-${engine}.png`)});}
+ for(const width of [320,390,768]){await page.setViewportSize({width,height:844});await openTab(page,'ai');await page.screenshot({path:path.join(root,`qa-results/${capture}-ai-${width}-${engine}.png`)});}
+ await page.setViewportSize({width:390,height:844});await page.locator('#open-menu').click();await page.screenshot({path:path.join(root,`qa-results/${capture}-more-${engine}.png`)});await page.keyboard.press('Escape');
+ console.log(`PASS ${capture} screenshots with synthetic fixtures; before assets are pinned to aae87d6bc`);
 }else{
 stage='V1.6 layout and navigation';assert.equal(await page.locator('[data-day]').count(),9);
 assert.equal(await page.locator('.trip-overview').evaluate(el=>el.open),false);
@@ -82,6 +84,7 @@ assert.equal(await page.locator('.day-thumb').evaluate(el=>el.complete&&el.natur
 await page.locator('#open-menu').click();assert.equal(await page.locator('#section-menu').evaluate(el=>el.open),true);await page.keyboard.press('Escape');
 for(const width of [320,360,390,768,1140]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'layout overflow at '+width);}
 await page.setViewportSize({width:390,height:844});
+await page.locator('#open-menu').click();await page.screenshot({path:path.join(root,`qa-results/after-more-${engine}.png`)});await page.keyboard.press('Escape');
 await page.screenshot({path:path.join(root,`qa-results/v16-planning-${engine}.png`),fullPage:true});
 await page.locator('#travel-mode').click();assert.equal(await page.locator('#travel-shortcuts').isVisible(),true);
 await page.locator('#travel-shortcuts [data-ai-translate]').click();assert.equal(await page.locator('#ai-task').inputValue(),'translate');
