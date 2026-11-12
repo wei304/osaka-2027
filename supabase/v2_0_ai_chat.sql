@@ -34,7 +34,12 @@ begin
  if p_action in ('recover','prepare') and j.operation is not null then return jsonb_build_object('jobStatus',j.phase,'response',j.response,'claimed',false);end if;
  if p_action='prepare' then
   if coalesce(p_body->>'hash','')!~'^[0-9a-f]{64}$' or p_body->>'conversation_id' is null or p_body->>'message_id' is null then return jsonb_build_object('status',400,'error','invalid_chat_context');end if;
-  r:=private.ai_trip_request('reserve',p_body||jsonb_build_object('cache',false));if r ? 'status' then return r;end if;
+  r:=private.ai_trip_request('reserve',p_body);if r ? 'status' then return r;end if;
+  if r ? 'cached' then
+   v_response:=jsonb_build_object('result',r->'cached','cached',true);
+   insert into private.ai_chat_receipts(operation,token_hash,conversation_id,message_id,input_hash,phase,response) values(op,th,(p_body->>'conversation_id')::uuid,(p_body->>'message_id')::uuid,p_body->>'hash','ready',v_response);
+   return jsonb_build_object('claimed',false,'jobStatus','ready','response',v_response);
+  end if;
   insert into private.ai_chat_receipts(operation,token_hash,conversation_id,message_id,input_hash,request_id,phase) values(op,th,(p_body->>'conversation_id')::uuid,(p_body->>'message_id')::uuid,p_body->>'hash',(r->>'requestId')::uuid,'pending');
   return r||jsonb_build_object('claimed',true);
  end if;
