@@ -2,7 +2,7 @@ import {handleRegions} from './regions.js';
 import {validateItem} from '../../../core.js';
 import {normalizeFavoriteRow,validateFavoriteEdit} from '../../../favorites-core.js';
 const ORIGIN='https://wei304.github.io';
-const ACTIONS=new Set(['status','setup','unlock','check','rows','history','apply','apply_batch','exchange_rate','rotate','lock','favorites_rows','favorites_preview','favorites_import','favorites_edit','favorites_history','favorites_restore','favorites_undo_import','favorites_link_days','favorites_regions_plan','favorites_regions_preview','favorites_regions_confirm']);
+const ACTIONS=new Set(['status','setup','unlock','check','rows','history','apply','apply_batch','exchange_rate','rotate','lock','favorites_rows','favorites_preview','favorites_import','favorites_edit','favorites_history','favorites_restore','favorites_undo_import','favorites_link_days','favorites_link_days_batch','favorites_days_context','favorites_regions_plan','favorites_regions_preview','favorites_regions_confirm']);
 const SECRET_ACTIONS=new Set(['setup','unlock','rotate']);
 const MAX_BYTES=48000;
 async function readBody(request){
