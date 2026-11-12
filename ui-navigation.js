@@ -21,6 +21,7 @@ export function installNavigation(){
  const secondary=document.createElement('button');secondary.type='button';secondary.id='daily-map';secondary.textContent='当天地图路线 ↗';secondary.dataset.openTab='maps';$('#itinerary-controls .itinerary-controls-body').prepend(secondary);
  for(const name of ['favorites','resources','tickets']){const nav=document.createElement('nav');nav.className='collection-nav';nav.setAttribute('aria-label','收藏与资料分类');for(const [target,label] of [['favorites','地图地点'],['resources','参考资料'],['tickets','票券附件']]){const b=document.createElement('button');b.type='button';b.dataset.openTab=target;b.textContent=label;b.setAttribute('aria-current',String(target===name));nav.append(b);}$('#'+name).prepend(nav);}
  $('#resources .quick-section')?.remove();
+ const shortcuts=$('#travel-shortcuts');shortcuts.querySelector('[data-open-tab=tickets]').hidden=true;const cards=[...shortcuts.querySelectorAll('[data-jump=emergency-section]')];cards[0].textContent='住宿与紧急卡';cards.slice(1).forEach(b=>b.hidden=true);
  const select=name=>{if(!SECTIONS.includes(name))return false;const todo=['departure','preparation','review'].includes(name);for(const id of SECTIONS)$('#'+id).hidden=todo?!['departure','preparation','review'].includes(id):id!==name;if(todo){const id=name==='departure'?'readiness-group':name+'-group';$('#'+id).open=true;}return true;};
  return {select};
 }
