@@ -8,7 +8,7 @@
     "test:db": "node qa/migration-v193.mjs",
     "test:browser": "node qa/browser-v14.mjs"
   },
-  "version": "1.9.1",
+  "version": "1.10.0",
   "devDependencies": {
     "@electric-sql/pglite": "0.5.16",
     "playwright-core": "1.65.0"
