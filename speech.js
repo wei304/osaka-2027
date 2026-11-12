@@ -1,4 +1,3 @@
-import {PHRASES} from './phrases.js';
 export function japaneseVoices(synth){try{return (synth?.getVoices()||[]).filter(v=>/^ja(?:[-_]|$)/i.test(v.lang||'')).sort((a,b)=>Number(b.localService)-Number(a.localService));}catch{return [];}}
 
 // Keep the utterance alive; all terminal callbacks belong to one playback only.
@@ -23,7 +22,7 @@ export function createSpeechPlayer({synth=globalThis.speechSynthesis,Utterance=g
  return {play,stop(){cancel();notify({state:'idle',message:'已停止朗读。'});}};
 }
 
-export function installSpeech({toast,refresh}){
+export function installSpeech({toast,refresh,getPhrase}){
  const synth=globalThis.speechSynthesis,$=s=>document.querySelector(s);let root=null,last=null;
  function feedback(event){last=event;const el=$('#speech-status');if(el)el.textContent=event.message;if(root){root.querySelectorAll('[data-speech-feedback]').forEach(el=>{el.textContent=String(event.id)===el.dataset.speechFeedback?event.message:'';});root.querySelectorAll('[data-speak-phrase]').forEach(b=>{const active=String(event.id)===b.dataset.speakPhrase;b.textContent=active&&event.state==='loading'?'准备声音…':active&&event.state==='speaking'?'正在朗读…':b.dataset.speechRate?'慢速':'朗读';b.setAttribute('aria-pressed',String(active&&['loading','speaking'].includes(event.state)));});}if(event.state==='error')toast(event.message);}
  const player=createSpeechPlayer({synth,notify:feedback});
@@ -31,11 +30,11 @@ export function installSpeech({toast,refresh}){
   if(!last||!['loading','speaking','error'].includes(last.state)){const el=$('#speech-status');if(el)el.textContent=!synth?'此浏览器不支持设备语音，可复制或展示日文。':voices.length?`找到${voices.length}种日语声音。点朗读后会检查是否实际启动；本机声音是否已下载取决于系统设置。`:'浏览器未列出日语声音；可点击测试，尝试系统自动选择日语。是否有声音需以实际播放为准。';}
  }
  function voice(){const voices=japaneseVoices(synth),value=$('#speech-voice')?.value;return value?voices.find(v=>(v.voiceURI||v.name)===value):undefined;}
- function bind(target){root=target;status();root.querySelectorAll('[data-speak-phrase]').forEach(b=>{b.disabled=false;b.onclick=()=>{const phrase=PHRASES.find(p=>p.id===Number(b.dataset.speakPhrase));if(phrase)player.play(phrase.ja,voice(),phrase.id,{rate:Number(b.dataset.speechRate)||1});};});if(last)feedback({...last,state:last.state==='error'?'notice':last.state});}
+ function bind(target){root=target;status();root.querySelectorAll('[data-speak-phrase]').forEach(b=>{b.disabled=false;b.onclick=()=>{const phrase=getPhrase?.(b.dataset.speakPhrase);if(phrase)player.play(phrase.ja,voice(),phrase.id,{rate:Number(b.dataset.speechRate)||1});};});if(last)feedback({...last,state:last.state==='error'?'notice':last.state});}
  synth?.addEventListener?.('voiceschanged',()=>{status();refresh();});
  $('#stop-speech').onclick=()=>player.stop();
  $('#refresh-speech')?.addEventListener('click',()=>{player.stop();last=null;status();refresh();toast(japaneseVoices(synth).length?'已重新检测日语声音，请点测试。':'未列出日语声音，可点测试尝试系统自动选择。');});
  $('#test-speech')?.addEventListener('click',()=>player.play('こんにちは。日本語の音声テストです。',voice(),'test'));
  $('#speech-voice')?.addEventListener('change',()=>player.stop());status();
- return {bind,stop(){player.stop();last=null;}};
+ return {bind,speak(text,id='draft',rate=1){player.play(text,voice(),id,{rate});},stop(){player.stop();last=null;}};
 }
