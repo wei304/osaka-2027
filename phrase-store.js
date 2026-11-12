@@ -1,0 +1,16 @@
+import {phraseFields,validateCustom,mergePhraseImport,PHRASE_LIMITS} from './phrase-core.js';
+const DB='osaka-device-phrases-v1';
+function transaction(mode,run){return new Promise((resolve,reject)=>{const request=indexedDB.open(DB,1);request.onupgradeneeded=()=>request.result.createObjectStore('state');request.onerror=()=>reject(Error('本机短句存储不可用；内置短句仍可使用。'));request.onsuccess=()=>{const db=request.result,tx=db.transaction('state',mode);let result,error;tx.oncomplete=()=>{db.close();resolve(result);};tx.onerror=tx.onabort=()=>{db.close();reject(error||Error('本机保存失败或另一页面已更新，请重新打开并导出备份。'));};run(tx.objectStore('state'),value=>result=value,e=>{error=e;tx.abort();});};});}
+export class PhraseStore{
+ constructor(){this.rows=[];this.revision=0;this.blocked=false;this.chain=Promise.resolve();this.ready=this.load();}
+ async load(){try{const saved=await transaction('readonly',(s,set)=>{const r=s.get('library');r.onsuccess=()=>set(r.result);});if(saved){if(!Array.isArray(saved.rows))throw Error('短句缓存格式错误。');this.rows=saved.rows.map(validateCustom);this.revision=saved.revision;}else{this.rows=[];this.revision=0;}this.blocked=false;}catch(e){this.blocked=true;throw e;}}
+ refresh(){this.ready=this.load();return this.ready;}
+ mutate(change){const task=this.chain.catch(()=>{}).then(async()=>{await this.ready;if(this.blocked)throw Error('本机短句存储不可用，请刷新后重试。');const expected=this.revision;let rows;await transaction('readwrite',(s,set,abort)=>{const r=s.get('library');r.onsuccess=()=>{try{if((r.result?.revision||0)!==expected)return abort();rows=change(this.rows.map(p=>({...p})));if(rows.length>PHRASE_LIMITS.rows)throw Error('自定义短句已达500条上限。');s.put({revision:expected+1,rows},'library');}catch(e){abort(e);}};});this.rows=rows;this.revision=expected+1;});this.chain=task;return task;}
+ async save(fields,{id=null,expected=null,pinned=false}={}){const clean=phraseFields(fields),savedId=id||'custom:'+crypto.randomUUID();await this.mutate(rows=>{const old=rows.find(p=>p.id===savedId);if(id&&(!old||old.version!==expected))throw Error('短句已在另一页面修改，请重新打开。');const row={id:savedId,...clean,pinned:old?.pinned??pinned,archived:old?.archived??false,version:(old?.version||0)+1,updatedAt:new Date().toISOString()};return [...rows.filter(p=>p.id!==savedId),row];});return savedId;}
+ async patch(id,patch){await this.mutate(rows=>rows.map(p=>p.id===id?{...p,...patch,version:p.version+1,updatedAt:new Date().toISOString()}:p));}
+ async remove(id){await this.mutate(rows=>rows.filter(p=>p.id!==id));}
+ async import(backup){let stats;await this.mutate(rows=>{stats=mergePhraseImport(rows,backup);return stats.rows;});return stats;}
+ backup(){return {kind:'local-phrase-library',schema:1,exportedAt:new Date().toISOString(),phrases:structuredClone(this.rows)};}
+}
+export const phrasePending=async(value=undefined)=>value===undefined?transaction('readonly',(s,set)=>{const r=s.get('ai-pending');r.onsuccess=()=>set(r.result||null);}):transaction('readwrite',s=>{if(value===null)s.delete('ai-pending');else s.put(value,'ai-pending');});
+export const claimPhraseRequest=value=>transaction('readwrite',(s,set,abort)=>{const r=s.get('ai-pending');r.onsuccess=()=>{if(r.result)return abort(Error('请先核对上次请求，避免重复收费。'));s.put(value,'ai-pending');};});
