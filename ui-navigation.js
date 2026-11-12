@@ -11,7 +11,9 @@ export function installNavigation(){
  $('#app-main').append(departure);
  const todo=document.createElement('button');todo.type='button';todo.dataset.tab='departure';todo.textContent='出发前待办';buttons.set('departure',todo);
  buttons.get('tools').textContent='日语与旅行工具';buttons.get('routes').textContent='核实路线与时段比较';buttons.get('maps').textContent='完整地图路线';buttons.get('sharing').textContent='只读行程分享';
- menu.replaceChildren(group('常用',['days','tickets','favorites','ledger','ai']),group('随身资料',['resources','essentials','tools','departure']),group('高级工具',['maps','routes','preparation','review'],true),group('分享',['sharing'],true),group('记录与设置',['history','settings'],true));
+ menu.replaceChildren(group('常用',['days','tickets','favorites','ledger','ai']),group('随身资料',['resources','essentials','tools','departure']),group('高级工具',['maps','routes'],true),group('分享',['sharing'],true),group('记录与设置',['history','settings'],true));
+ // Retain legacy targets for bookmarks and internal callers, with one visible todo entry.
+ const legacy=document.createElement('div');legacy.hidden=true;legacy.append(buttons.get('preparation'),buttons.get('review'));menu.append(legacy);
  // Keep old tab buttons accessible under More, but avoid repeating them on the home page.
  $('#open-menu').textContent='更多';
  const bottom=$('#mobile-nav'),icons=new Map([...bottom.querySelectorAll('[data-main-tab]')].map(b=>[b.dataset.mainTab,b.querySelector('svg').cloneNode(true)]));for(const [old,name,label] of [['resources','tickets','票券'],['ledger','favorites','收藏'],['ai','ledger','费用'],['more','ai','AI']]){const b=bottom.querySelector('[data-main-tab="'+old+'"]');b.dataset.mainTab=name;b.querySelector('span').textContent=label;}
