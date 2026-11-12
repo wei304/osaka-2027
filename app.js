@@ -1,3 +1,4 @@
+import {installNavigation} from './ui-navigation.js';
 import {installFavorites} from './favorites-ui.js';
 import {installLayout} from './ui-layout.js';
 import {installSafety} from './safety-ui.js';
@@ -20,6 +21,7 @@ import {installAuth,authError} from './auth.js';
 import {DEFAULT_CONFIG} from './config.js';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 installLayout();
+const navigation=installNavigation();
 const KEY='osaka-2027-v1',CONFIG=KEY+'-config',SESSION=KEY+'-shared-session';
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))||fallback;}catch{return fallback;}};
 let state=read(KEY,emptyState()),config=DEFAULT_CONFIG,session=read(SESSION,null),cloud=null,day=DAYS[0].date,inflight=null,syncing=false,cloudHistory=[],lastSync='',syncError='',editVersion=null,storageOK=true,externalChange=false;
@@ -31,7 +33,7 @@ if(!Array.isArray(state.queue)||!Array.isArray(state.items)||!Array.isArray(stat
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let toastTimer;function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,6500);}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));storageOK=true;}catch{storageOK=false;toast('设备存储已满或不可用，请立即导出备份；当前修改暂存于此页面。');}renderStatus();}
-function selectTab(name){const target=$('.tabs [data-tab="'+name+'"]');if(!target)return;$('#section-menu').close();$('#current-section').textContent=target.textContent;document.body.dataset.tab=name;if(name!=='tools')travelTools?.stopSpeech();if(name==='essentials')safety?.open();if(name!=='ai')aiUI?.leave();$$('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));['favorites','days','review','maps','ledger','preparation','resources','tickets','tools','ai','routes','sharing','essentials','history','settings'].forEach(id=>$('#'+id).hidden=id!==name);if(name==='favorites')favorites?.open();if(name==='history')loadHistory();if(name==='ai')void aiUI?.open();if(name==='routes')routesUI?.open();if(name==='sharing')sharingUI?.open();if(name==='tickets'&&navigator.onLine)void tickets?.refresh();document.querySelectorAll('[data-main-tab]').forEach(b=>b.classList.toggle('active',b.dataset.mainTab===(['favorites','tickets','resources','preparation','essentials'].includes(name)?'resources':['days','review','maps','routes'].includes(name)?'days':['ai','ledger'].includes(name)?name:'more')));}
+function selectTab(name){const target=$('.tabs [data-tab="'+name+'"]');if(!target)return;$('#section-menu').close();$('#current-section').textContent=target.textContent;document.body.dataset.tab=name;if(name!=='tools')travelTools?.stopSpeech();if(['essentials','departure','preparation','review'].includes(name))safety?.open();if(name!=='ai')aiUI?.leave();$$('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));navigation.select(name);if(name==='favorites')favorites?.open();if(name==='history')loadHistory();if(name==='maps'){$('#map-day').value=day;features?.render();}if(name==='ai')void aiUI?.open();if(name==='routes')routesUI?.open();if(name==='sharing')sharingUI?.open();if(name==='tickets'&&navigator.onLine)void tickets?.refresh();document.querySelectorAll('[data-main-tab]').forEach(b=>b.classList.toggle('active',b.dataset.mainTab===(['resources','favorites'].includes(name)?'favorites':['days','maps','routes'].includes(name)?'days':['tickets','ai','ledger'].includes(name)?name:'more')));}
 function renderStatus(){if(!session)$('#section-menu').close();$('#mobile-nav').hidden=!session;$('#undo-last').disabled=syncing||state.queue.length>0||!navigator.onLine;const pending=state.queue.length,conflicts=state.queue.filter(q=>q.conflict).length;$('#connection').textContent=!storageOK?'保存失败，请导出':!navigator.onLine?'离线 · 本机保存':conflicts?`${conflicts} 项修改冲突`:syncing?'正在同步…':session?syncError?'同步失败 · 已存本机':pending?`${pending} 项待同步`:'已同步':'手册已锁定';$('#sync-detail').textContent=syncError||(session?`共用手册已解锁。${lastSync?'最近同步 '+lastSync:'正在检查云端连接。'}`:'请输入共用密码解锁。');$('#pending-count').textContent=`${pendingItems(visibleItems(state)).length} 项待确认`;renderConflicts();authUI?.render();}
 function card(item){const queued=state.queue.some(q=>q.item.id===item.id);return `<article class="card"><div class="card-top"><div><div class="card-meta"><span>${escape(item.time||'时间待定')}</span><span>·</span><span>${escape(CATEGORIES[item.category])}</span>${queued?'<span>· 本机修改</span>':''}</div><h3>${escape(item.title)}</h3>${item.ja?`<p class="ja" lang="ja">${escape(item.ja)}</p>`:''}</div><span class="pill ${escape(item.status)}">${escape(STATUSES[item.status])}</span></div>${item.notes?`<p class="notes">${escape(cleanNotes(item))}</p>`:''}<div class="card-buttons"><a href="${escape(mapUrl(item))}" target="_blank" rel="noopener noreferrer">↗ 地图导航</a><button data-edit="${escape(item.id)}">编辑安排</button></div></article>`;}
 function bindEdit(root){root.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(b.dataset.edit));}
@@ -78,4 +80,6 @@ async function start(){
  if('serviceWorker'in navigator){try{await navigator.serviceWorker.register('./sw.js');await navigator.serviceWorker.ready;$('#offline-status').textContent='手册已缓存。这台已解锁的设备可离线查看与编辑；地图与云端同步需要网络。';}catch{$('#offline-status').textContent='离线缓存尚未成功，请联网刷新后重试。';}}
  void sync();void favorites?.sync();
 }
-void start();
+const legacySection=()=>{const name=location.hash.slice(1);if(session&&document.querySelector('#all-sections [data-tab="'+CSS.escape(name)+'"]'))selectTab(name);};
+window.addEventListener('hashchange',legacySection);
+void start().then(legacySection);
