@@ -1,3 +1,4 @@
+import {installDisclosures} from './ui-disclosures.js';
 import {installNavigation} from './ui-navigation.js';
 import {installFavorites} from './favorites-ui.js';
 import {installLayout} from './ui-layout.js';
@@ -22,6 +23,7 @@ import {DEFAULT_CONFIG} from './config.js';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 installLayout();
 const navigation=installNavigation();
+installDisclosures();
 const KEY='osaka-2027-v1',CONFIG=KEY+'-config',SESSION=KEY+'-shared-session';
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))||fallback;}catch{return fallback;}};
 let state=read(KEY,emptyState()),config=DEFAULT_CONFIG,session=read(SESSION,null),cloud=null,day=DAYS[0].date,inflight=null,syncing=false,cloudHistory=[],lastSync='',syncError='',editVersion=null,storageOK=true,externalChange=false;
