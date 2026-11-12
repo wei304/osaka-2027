@@ -1,0 +1,34 @@
+await import('./migration-v191.mjs');
+import {createFavoritesFixture} from './favorites-fixture.mjs';
+import {makeAIHandler} from '../supabase/functions/ai-trip/handler.js';
+import {phraseAIInput} from '../phrase-ai-core.js';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const f=await createFavoritesFixture(),token='a'.repeat(64);
+try{
+ const sql=fs.readFileSync(new URL('../supabase/v1_9_2_phrase_ai.sql',import.meta.url),'utf8');await f.db.exec(sql);await f.db.exec(sql);
+ await f.db.exec('update private.ai_policy set enabled=true');
+ const call=async(action,body)=>(await f.db.query('select public.phrase_ai_request($1,$2::jsonb) r',[action,JSON.stringify(body)])).rows[0].r;
+ const input=phraseAIInput({category:'餐厅',zh:'五个人，两份。',ja:'5人です。二つお願いします。',kana:'ごにんです。ふたつおねがいします。'},'translate');
+ let models=0,bad=false;const result={zh:'请给我们两份。',ja:'二つお願いします。',kana:'ふたつおねがいします。',sourceLanguage:'zh',targetLanguage:'ja'};
+ const h=makeAIHandler({enabled:true,rpc:(a,b)=>{assert.ok(a.startsWith('phrase_'));return call(a.slice(7),b);},complete:async({input})=>{models++;assert.ok(!input.includes('USER_DATA'));return {finish:'stop',content:JSON.stringify(bad?{...result,sql:'delete'}:result),usage:{total_tokens:100}};}});
+ const send=async(body,t=token)=>h(new Request('https://synthetic.invalid',{method:'POST',headers:{'X-Trip-Session':t},body:JSON.stringify(body)}));
+ const operation=crypto.randomUUID(),body={action:'phrase_generate',input,operation,consent:true};
+ assert.equal((await call('status',{token:'bad'})).error,'locked');assert.equal((await send({...body,consent:false})).status,400);assert.equal(models,0);
+ assert.equal((await send(body)).status,200);assert.equal(models,1);assert.equal((await send(body)).status,200);assert.equal(models,1);
+ const recover=await (await send({action:'phrase_recover',operation})).json();assert.equal(recover.jobStatus,'ready');assert.deepEqual(recover.result,result);
+ assert.equal((await send({...body,operation:crypto.randomUUID()})).status,200);assert.equal(models,1,'same phrase must reuse cache');
+ assert.equal((await send({...body,input:{...input,phrase:{...input.phrase,zh:'不同内容'}}})).status,409);
+ await f.db.query("insert into private.shared_sessions values(extensions.digest($1,'sha256'),1,now()+interval '1 hour')",['b'.repeat(64)]);
+ assert.equal((await send({action:'phrase_recover',operation},'b'.repeat(64))).status,404);
+ assert.equal((await f.db.query('select count(*)::int n from private.ai_usage')).rows[0].n,1);
+ assert.equal(Number((await f.db.query('select charged_cny::text c from private.ai_usage')).rows[0].c),.0008);
+ assert.equal((await f.db.query('select count(*)::int n from private.ai_drafts')).rows[0].n,0);
+ assert.equal((await f.db.query('select count(*)::int n from public.trip_revisions')).rows[0].n,0);
+ for(const role of ['anon','authenticated'])assert.equal((await f.db.query("select has_function_privilege($1,'public.phrase_ai_request(text,jsonb)','execute') ok",[role])).rows[0].ok,false);
+ assert.equal((await f.db.query("select relrowsecurity from pg_class where oid='private.phrase_ai_jobs'::regclass")).rows[0].relrowsecurity,true);
+ await f.db.exec("update private.ai_usage set created_at=now()-interval '11 seconds'");bad=true;const badOp=crypto.randomUUID();assert.equal((await send({...body,operation:badOp,input:{...input,phrase:{...input.phrase,zh:'请改写这句'}}})).status,422);assert.equal((await call('recover',{token,operation:badOp})).jobStatus,'failed');
+ assert.ok(Number((await f.db.query("select charged_cny::text c from private.ai_usage order by created_at desc limit 1")).rows[0].c)>0,'failure retains conservative reservation');
+ await f.db.exec('update private.ai_policy set normal_budget_cny=0,travel_budget_cny=0');const before=models;assert.equal((await send({...body,operation:crypto.randomUUID()})).status,503);assert.equal(models,before);
+ console.log('PASS V1.9.2 phrase AI: session/RLS isolation, strict structured output, one reservation, duplicate/cache/recover zero extra calls, failure accounting, zero-cap block, no phrase sync or itinerary writes.');
+}finally{await f.close();}
