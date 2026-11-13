@@ -1,8 +1,17 @@
-# V2.1.0-rc.1 生产发布方案｜已批准分阶段执行，备份待补齐
+# V2.1.0-rc.1 生产发布方案｜兼容桥及后端已发布，前端待设备核对
 
 目标：`wei304/osaka-2027` 的 GitHub Pages 和 Supabase 项目 `tvdidtuufktglyozwkew`。当前生产基线为 V1.11 / `bfc35b4`，`ai-trip` v13、`shared-trip` v9、`trip-files` v4、`share-trip` v4。用户已批准按本方案分阶段执行；隔离测试通过不等于已部署。
 
 ## 2026-11-13 执行记录
+
+最新进展：用户提供压缩票券副本后，已明确批准接受非逐字节附件备份限制并继续发布。私有副本与差异清单已保存到用户指定 E 盘目录；生产原附件未改动。此批准只调整附件备份条件，不代替五台设备接管核对。
+
+- PR #9 已合并，main 为 `a41a7d682d8273883dccdba1baeac1b8da468a3f`；线上 `sw.js` 返回200并包含 `osaka-shell-v111-bridge1`。
+- `v2_0_ai_chat` 已应用；`ai-trip` v14 ACTIVE，完整20文件依赖包已部署。其他正式 Edge 未更新，沿用原自管门禁及 verify_jwt 配置。
+- 部署后只读核对：94 收藏、85 行程、187 修订、16 AI 使用记录均与发布前一致；新聊天回执0条。预算仍为日常2元/旅行10元，最高价格8元/百万token。未导入 CSV、未发起模型调用。
+- 新表 RLS 开启；anon/authenticated 无表权限及聊天 RPC 执行权。线上 chat_sources/chat_recover/generate 无凭证均401，错误 Origin 403。
+- 安全顾问32项 INFO 为服务端专用表启用 RLS 且无客户端策略（新增聊天回执占1项）；既有 Auth 泄露密码保护关闭 WARN 未改变。详见[官方说明](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)。未为消除提示开放客户端权限。
+- 完整新前端及生产登录后验收尚未完成。以下原执行记录为发布前快照，不应解读为当前仍未部署后端。
 
 - 已完成仓库外私有数据库快照、四个正式 Edge 完整源码包和 V1.11 源码归档。隔离恢复核对通过：34 张表、50 个函数、100 个约束，以及逐表数据摘要、RLS 和客户端拒绝访问检查。该恢复不等于完整 Supabase 基础设施恢复验证。
 - 尚缺现存一份私有 Storage 票券附件的实际文件备份。对象元数据已保存，但不能代替文件；`storageBinaryVerified=false`。因此完整备份门槛尚未通过，生产迁移、Edge 更新及桥合并均未执行。
