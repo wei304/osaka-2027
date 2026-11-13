@@ -1,0 +1,33 @@
+{
+  "candidate": "2.1.0-rc.1",
+  "branch": "codex/stage9-system-acceptance",
+  "codeComplete": true,
+  "isolatedAutomationPassed": true,
+  "productionDeployed": false,
+  "productionDeploymentState": "bridge-and-backend-deployed; frontend-awaiting-five-device-check",
+  "productionBridgeDeployed": true,
+  "productionBackendDeployed": true,
+  "productionFrontendDeployed": false,
+  "productionAiTripVersion": 14,
+  "bridgeMergeCommit": "a41a7d682d8273883dccdba1baeac1b8da468a3f",
+  "backupRestoreVerified": true,
+  "storageOriginalBinaryVerified": false,
+  "userAcceptedCompressedAttachmentBackup": true,
+  "productionAcceptanceComplete": false,
+  "unitTestsPassed": 158,
+  "databaseRegression": "passed",
+  "singleDatabaseSynthetic94Flow": "passed",
+  "browserRegression": {"chrome": "passed", "webkit": "passed"},
+  "legacyPwaUpgrade": {"chrome": "passed", "webkit": "passed"},
+  "releaseAudit": "passed",
+  "realUserCsvUsedThisStage": false,
+  "realPaidProviderCalls": 0,
+  "realGeographicApiCalls": 0,
+  "remoteGithubCiExecutedThisStage": false,
+  "productionMutationsThisStage": 3,
+  "pendingManualChecks": [
+    "Native iOS/Android PWA installation and system keyboard/voice behavior",
+    "Five actual devices: queues, uncertain requests and compatibility worker control",
+    "Production authenticated acceptance and any separately authorized paid semantic check"
+  ]
+}

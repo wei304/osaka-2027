@@ -8,13 +8,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run test:release
       - run: npm test
       - run: npm run test:db
+      - run: npm run test:system
   browsers:
     needs: regression
     runs-on: ubuntu-latest
@@ -25,6 +29,8 @@ jobs:
         engine: [chrome, webkit]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -42,6 +48,10 @@ jobs:
           set +e
           npm run test:browser > qa-results/run.log 2>&1
           test_exit=$?
+          if [ "$test_exit" = "0" ]; then
+            npm run test:pwa >> qa-results/run.log 2>&1
+            test_exit=$?
+          fi
           echo "exit_code=$test_exit" >> "$GITHUB_OUTPUT"
           node -e 'const fs=require("fs");let s="passed";if(fs.existsSync("qa-results/failure-summary.json")){const d=JSON.parse(fs.readFileSync("qa-results/failure-summary.json","utf8"));s=d.stage+": "+d.message+" "+d.stack;}console.log("summary="+s.replace(/[\r\n]/g," ").slice(0,700))' >> "$GITHUB_OUTPUT"
           cat qa-results/run.log
@@ -65,6 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -84,6 +96,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'

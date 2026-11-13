@@ -1,0 +1,3 @@
+import {execFileSync} from 'node:child_process';import fs from 'node:fs';
+export const LEGACY_RELEASE='bfc35b408b46d4a1c2744f547a56ad0d49cd790a';
+export function bridgeWorker(){const old=execFileSync('git',['show',LEGACY_RELEASE+':sw.js'],{encoding:'utf8'}),current=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');const assets=old.match(/const ASSETS=\[[^;]+;/)?.[0];if(!assets)throw Error('Legacy asset manifest unavailable');return '// Compatibility bridge for V1.11 only. Publish separately BEFORE V2.1 assets.\n'+current.replace(/const CACHE='[^']+';/,"const CACHE='osaka-shell-v111-bridge1';").replace(/const ASSETS=\[[^;]+;/,assets);}

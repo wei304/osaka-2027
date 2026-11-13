@@ -1,0 +1,19 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {travelNext,travelTimeline,mapsTarget,dayTickets,attachmentSummary} from '../travel-mode-core.js';
+import {validateItem} from '../core.js';import {withPlan,choiceItem} from '../schedule.js';import {ticketItem} from '../advanced.js';
+const day='2027-01-11',item=(id,time,extra={},p={})=>({...validateItem(withPlan({id,day,title:id,time,category:'spot',status:'confirmed',...extra},p)),version:1});
+test('Japan date/time, manual next, unknown times, completed/moved/stale choices stay conservative',()=>{
+ const rows=[item('early','09:00',{}, {end:'10:00'}),item('late','14:00'),item('unknown',''),item('flight','08:00',{category:'transport'},{transport:'flight'}),item('done','07:00',{}, {done:true}),item('paused','06:00',{}, {state:'blocked'})];
+ assert.equal(travelNext(rows,day,'',new Date('2027-01-11T00:30:00Z')).item.id,'early');assert.match(travelNext(rows,day,'',new Date('2027-01-11T00:30:00Z')).label,/候选/);
+ assert.equal(travelNext(rows,day,'',new Date('2027-01-10T15:30:00Z')).label,'下一项定时安排');assert.equal(travelNext(rows,day,'',new Date('2027-01-11T15:00:00Z')).label,'所选日期首项未完成安排');
+ assert.equal(travelNext(rows,day,'late').item.id,'late');assert.equal(travelNext(rows,day,'unknown').item.id,'unknown');assert.match(travelNext(rows,day,'unknown').warnings.join(),/时间待定/);
+ assert.equal(travelNext(rows,day,'done').manual,false);assert.equal(travelNext(rows,day,'flight').manual,false);assert.equal(travelNext(rows,day,'paused').manual,false);assert.equal(travelNext(rows.map(i=>i.id==='late'?{...i,day:'2027-01-12'}:i),day,'late').manual,false);
+ assert.equal(travelNext([item('only','')],day).item,null);assert.equal(travelNext(rows,'2027-01-12').item,null);
+});
+test('Unchosen alternatives remain visible but never silently become the next station',()=>{const a=item('a','10:00',{}, {group:'午餐'}),b=item('b','10:00',{}, {group:'午餐'});assert.equal(travelNext([a,b],day).item,null);assert.equal(travelNext([a,b,choiceItem(day,'午餐','b')],day).item.id,'b');const blocks=travelTimeline([a,b],day);assert.equal(blocks.length,1);assert.equal(blocks[0].selected,null);assert.equal(blocks[0].items.length,2);});
+test('navigation prefers original Maps, otherwise verified coordinates or explicitly named search',()=>{
+ const p=item('place','10:00',{notes:'原始链接：https://maps.app.goo.gl/Example'});assert.equal(mapsTarget(p).url,'https://maps.app.goo.gl/Example');assert.equal(mapsTarget(p).reliable,true);
+ for(const bad of ['javascript:alert(1)','https://www.google.com.evil/maps/place/a','https://user:pass@www.google.com/maps/place/a','https://evil.invalid/maps/a','https://www.google.com/maps?url=https://evil.invalid'])assert.equal(mapsTarget({...p,notes:'原始链接：'+bad}).reliable,false);
+ const coord=item('coord','10:00',{}, {lat:34.6,lng:135.5,coordsVerified:true,coordsSource:'人工核实资料'});assert.match(mapsTarget(coord).url,/destination=34.6%2C135.5/);assert.equal(mapsTarget(item('unverified','')).reliable,false);assert.equal(mapsTarget({...p,title:'',ja:'',notes:''}),null);
+});
+test('Tickets require explicit dates/links, flag disagreement and never expose order reference in summary',()=>{const trip=item('place','10:00'),t=ticketItem('ticket-t','合成票券',{useDate:'2027-01-12',booking:'confirmed',linkedItemId:'place',orderRef:'PRIVATE-ORDER'});const linked=dayTickets([trip,t],day);assert.equal(linked.length,1);assert.equal(linked[0].dateConflict,true);assert.equal(dayTickets([trip,t],'2027-01-13').length,0);assert.match(attachmentSummary(t.id,null,null),/不能保证/);assert.match(attachmentSummary(t.id,[{id:'file',ticketId:t.id,status:'ready',version:2}],[{id:'file',version:1,available:true}]),/缓存0份/);assert.match(attachmentSummary(t.id,[{id:'file',ticketId:t.id,status:'ready',version:2}],[{id:'file',version:2,available:true}]),/缓存1份/);});
