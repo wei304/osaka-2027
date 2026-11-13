@@ -5,3 +5,10 @@ node_modules/
 
 qa-results/
 *private-backup*
+
+# Personal Takeout/CSV data must stay out of the public repository.
+*.csv
+*.CSV
+*.sqlite
+*.db
+*.ZIP
