@@ -1,0 +1,23 @@
+{
+  "checkedOn": "2026-11-13",
+  "method": "Read-only Supabase metadata, grants, aggregate counts and advisors",
+  "main": "bfc35b408b46d4a1c2744f547a56ad0d49cd790a",
+  "release": "V1.11",
+  "functions": {"ai-trip": 13, "shared-trip": 9, "trip-files": 4, "share-trip": 4},
+  "chatRpcExists": false,
+  "pendingMigration": "supabase/v2_0_ai_chat.sql",
+  "relatedTablesChecked": 33,
+  "allRelatedTablesRlsEnabled": true,
+  "anonAndAuthenticatedDirectBusinessTablePrivileges": false,
+  "anonExistingFavoriteAndAiRpcExecute": false,
+  "privateTicketBucket": true,
+  "ticketMaxBytes": 5242880,
+  "beforeAndAfterCounts": {"favorites": 94, "tripItems": 85, "tripRevisions": 187, "aiUsage": 16},
+  "budget": {"currency": "CNY", "normalDaily": 2, "travelDaily": 10, "maxPerMillionTokens": 8},
+  "advisors": [
+    {"level": "INFO", "name": "rls_enabled_no_policy", "count": 31, "assessment": "Private service-only tables with revoked client table privileges"},
+    {"level": "WARN", "name": "auth_leaked_password_protection", "count": 1, "assessment": "Existing Supabase Auth setting; PWA uses its own shared gate, not individual Auth accounts; unchanged and retained as known warning"}
+  ],
+  "privatePayloadsOrSecretsExportedToRepository": false,
+  "businessOrConfigurationMutations": 0
+}

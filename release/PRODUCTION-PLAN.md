@@ -42,7 +42,7 @@
 
 ## 4. Edge Functions 依赖和发布
 
-仅 `ai-trip` 需要更新。完整包包括 `index.ts`、`handler.js`、`chat.js`、`favorites.js`、`phrases.js`、`provider.js`，以及根目录共享模块：`chat-core.js`、`ai-core.js`、`favorite-ai-core.js`、`favorite-days-batch-core.js`、`favorite-region-core.js`、`favorites-core.js`、`phrase-ai-core.js`、`route-core.js`、`schedule.js`、`travel.js`、`advanced.js`、`features.js`、`settlement.js`、`core.js`。逐文件SHA256及自动解析的完整导入树见 `docs/stage9/release-audit.json`；以该清单为准，不仅上传Edge目录。
+仅 `ai-trip` 需要更新。完整包包括 `index.ts`、`handler.js`、`chat.js`、`favorites.js`、`phrases.js`、`provider.js`，以及根目录共享模块：`chat-core.js`、`ai-core.js`、`favorite-ai-core.js`、`favorite-days-batch-core.js`、`favorite-region-core.js`、`favorites-core.js`、`phrase-ai-core.js`、`route-core.js`、`schedule.js`、`travel.js`、`advanced.js`、`features.js`、`settlement.js`、`core.js`。逐文件SHA256（UTF-8文本按LF归一化，二进制按原字节）及自动解析的完整导入树见 `docs/stage9/release-audit.json`；以该清单为准，不仅上传Edge目录。
 
 `shared-trip` v9、`trip-files` v4、`share-trip` v4及两个旧诊断函数保持原样。没有新Provider/Places/语音服务或Secrets。保持现有 `verify_jwt=false` 配置，因为正式四函数使用自管共享门禁；不能误把它解释为匿名允许。部署后先检查无token/错误Origin被拒绝，以及新RPC路由存在；不自动generate、confirm或批量整理。
 

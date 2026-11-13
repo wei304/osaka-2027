@@ -14,6 +14,8 @@
 
 远端main及生产迁移仍停留V1.11，`public.ai_chat_request` 尚不存在；不能将“代码完成/测试通过”说成“新版已上线”。五台真实设备、原生安装PWA和真实模型语义不冒充自动化已完成。
 
+每阶段提交记录及完整文件清单见 [提交与文件台账](docs/stage9/STAGE-COMMITS-AND-FILES.md)；本阶段发布/迁移方案见 [生产方案](release/PRODUCTION-PLAN.md)。
+
 ## 本次补齐的系统验证
 
 `npm run test:system` 使用**同一个隔离PGlite数据库**，运行真实共享门禁、收藏、日期、费用、草案、apply_batch和历史SQL，依次执行：
