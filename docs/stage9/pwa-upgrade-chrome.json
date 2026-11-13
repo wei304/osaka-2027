@@ -1,0 +1,13 @@
+{
+  "result": "passed",
+  "engine": "chrome",
+  "legacyRelease": "bfc35b408b46d4a1c2744f547a56ad0d49cd790a",
+  "bridge": true,
+  "failedInstallRetainedOldShell": true,
+  "offlineQueuesPreserved": true,
+  "phraseAndHistoryPreserved": true,
+  "privateBlobPreserved": true,
+  "resumedOneRevisionPerRecord": true,
+  "realInstalledOSApp": false,
+  "paidCalls": 0
+}

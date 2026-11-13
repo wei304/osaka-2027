@@ -1,0 +1,49 @@
+{
+  "result": "passed",
+  "sourceFilesInspected": 206,
+  "privateDataArtifacts": 0,
+  "credentialLiterals": 0,
+  "assets": 73,
+  "edgeDependencies": {
+    "supabase/functions/ai-trip/index.ts": [
+      "advanced.js",
+      "ai-core.js",
+      "chat-core.js",
+      "core.js",
+      "favorite-ai-core.js",
+      "favorite-days-batch-core.js",
+      "favorite-region-core.js",
+      "favorites-core.js",
+      "features.js",
+      "phrase-ai-core.js",
+      "route-core.js",
+      "schedule.js",
+      "settlement.js",
+      "supabase/functions/ai-trip/chat.js",
+      "supabase/functions/ai-trip/favorites.js",
+      "supabase/functions/ai-trip/handler.js",
+      "supabase/functions/ai-trip/index.ts",
+      "supabase/functions/ai-trip/phrases.js",
+      "supabase/functions/ai-trip/provider.js",
+      "travel.js"
+    ],
+    "supabase/functions/shared-trip/index.ts": [
+      "core.js",
+      "favorite-region-core.js",
+      "favorites-core.js",
+      "supabase/functions/shared-trip/exchange.js",
+      "supabase/functions/shared-trip/handler.js",
+      "supabase/functions/shared-trip/index.ts",
+      "supabase/functions/shared-trip/regions.js"
+    ],
+    "supabase/functions/trip-files/index.ts": [
+      "supabase/functions/trip-files/handler.js",
+      "supabase/functions/trip-files/index.ts"
+    ],
+    "supabase/functions/share-trip/index.ts": [
+      "supabase/functions/share-trip/handler.js",
+      "supabase/functions/share-trip/index.ts"
+    ]
+  },
+  "productionChanges": false
+}

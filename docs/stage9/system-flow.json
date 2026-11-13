@@ -1,0 +1,24 @@
+{
+  "scenario": "synthetic-94-single-database-system-flow",
+  "realUserCSV": false,
+  "uniquePlaces": 94,
+  "batches": 19,
+  "favoriteModelCalls": 15,
+  "chatModelCalls": 11,
+  "paidProviderCalls": 0,
+  "geographicCalls": 0,
+  "unconfirmedFormalWrites": 0,
+  "checked": [
+    "ZIP selected CSV",
+    "dedup/reimport/manual evidence",
+    "B",
+    "A fixed authorization/review",
+    "E UUID batch",
+    "D current proof ranking",
+    "10-turn chat/favorites/private recovery",
+    "real SQL draft/confirm/apply/history",
+    "J next/navigation/tickets",
+    "grants"
+  ],
+  "result": "passed"
+}
